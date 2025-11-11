@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification - {{companyName}}</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Arial', sans-serif; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 28px; }
+        .content { padding: 40px 30px; }
+        .content h2 { color: #333333; font-size: 24px; margin-bottom: 20px; }
+        .content p { color: #666666; font-size: 16px; line-height: 1.6; margin-bottom: 15px; }
+        .otp-box { background-color: #f9f9f9; border: 2px dashed #667eea; padding: 30px; text-align: center; border-radius: 8px; margin: 30px 0; }
+        .otp-code { font-size: 36px; font-weight: bold; color: #667eea; letter-spacing: 8px; margin: 10px 0; }
+        .warning-box { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .warning-box p { margin: 0; color: #856404; font-size: 14px; }
+        .footer { background-color: #333333; color: #ffffff; text-align: center; padding: 20px; font-size: 14px; }
+        .footer a { color: #667eea; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Verify Your Email</h1>
+        </div>
+        <div class="content">
+            <h2>Hello {{username}}!</h2>
+            <p>Thank you for registering with {{companyName}}. To complete your registration and activate your account, please use the verification code below:</p>
+            
+            <div class="otp-box">
+                <p style="margin: 0; color: #666; font-size: 14px;">Your Verification Code</p>
+                <div class="otp-code">{{otpCode}}</div>
+                <p style="margin: 0; color: #999; font-size: 12px;">Valid for {{expiresInMinutes}} minutes</p>
+            </div>
+
+            <p>Enter this code in the verification page to activate your account and start shopping.</p>
+
+            <div class="warning-box">
+                <p><strong>⚠️ Security Notice:</strong> If you didn't request this verification code, please ignore this email. Never share this code with anyone.</p>
+            </div>
+
+            <p style="margin-top: 30px;">Need help? Contact our support team and we'll be happy to assist you!</p>
+        </div>
+        <div class="footer">
+            <p>© {{currentYear}} {{companyName}}. All rights reserved.</p>
+            <p><a href="#">Contact Us</a> | <a href="#">Privacy Policy</a></p>
+        </div>
+    </div>
+</body>
+</html>

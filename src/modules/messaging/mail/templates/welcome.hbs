@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to {{companyName}}</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Arial', sans-serif; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 28px; }
+        .content { padding: 40px 30px; }
+        .content h2 { color: #333333; font-size: 24px; margin-bottom: 20px; }
+        .content p { color: #666666; font-size: 16px; line-height: 1.6; margin-bottom: 15px; }
+        .cta-button { display: inline-block; padding: 15px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
+        .features { background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .features ul { list-style: none; padding: 0; }
+        .features li { padding: 10px 0; color: #666666; }
+        .features li:before { content: "✓ "; color: #667eea; font-weight: bold; margin-right: 10px; }
+        .footer { background-color: #333333; color: #ffffff; text-align: center; padding: 20px; font-size: 14px; }
+        .footer a { color: #667eea; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Welcome to {{companyName}}!</h1>
+        </div>
+        <div class="content">
+            <h2>Hello {{username}}!</h2>
+            <p>We're thrilled to have you join our community of satisfied customers. Your account has been successfully created!</p>
+            
+            <div class="features">
+                <h3 style="color: #333; margin-top: 0;">What you can do now:</h3>
+                <ul>
+                    <li>Browse thousands of products</li>
+                    <li>Get exclusive deals and discounts</li>
+                    <li>Track your orders in real-time</li>
+                    <li>Save your favorite items</li>
+                    <li>Enjoy secure checkout</li>
+                </ul>
+            </div>
+
+            <p>Start shopping now and discover amazing deals tailored just for you!</p>
+            
+            <center>
+                <a href="{{verificationUrl}}" class="cta-button">Start Shopping</a>
+            </center>
+
+            <p style="margin-top: 30px;">If you have any questions, our support team is here to help!</p>
+        </div>
+        <div class="footer">
+            <p>© {{currentYear}} {{companyName}}. All rights reserved.</p>
+            <p><a href="#">Unsubscribe</a> | <a href="#">Privacy Policy</a> | <a href="#">Contact Us</a></p>
+        </div>
+    </div>
+</body>
+</html>

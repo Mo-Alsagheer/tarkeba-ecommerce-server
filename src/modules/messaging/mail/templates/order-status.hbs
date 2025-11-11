@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Update - {{companyName}}</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Arial', sans-serif; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; }
+        .header h1 { color: #ffffff; margin: 0; font-size: 28px; }
+        .content { padding: 40px 30px; }
+        .content h2 { color: #333333; font-size: 24px; margin-bottom: 20px; }
+        .content p { color: #666666; font-size: 16px; line-height: 1.6; margin-bottom: 15px; }
+        .order-box { background-color: #f9f9f9; padding: 25px; border-radius: 8px; margin: 25px 0; border: 1px solid #e0e0e0; }
+        .order-number { font-size: 18px; font-weight: bold; color: #667eea; margin-bottom: 15px; }
+        .status-badge { display: inline-block; padding: 8px 20px; background-color: #28a745; color: white; border-radius: 20px; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+        .tracking-box { background-color: #e7f3ff; border-left: 4px solid #2196F3; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .tracking-box p { margin: 0; color: #0d47a1; font-size: 14px; }
+        .cta-button { display: inline-block; padding: 15px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
+        .footer { background-color: #333333; color: #ffffff; text-align: center; padding: 20px; font-size: 14px; }
+        .footer a { color: #667eea; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Order Update</h1>
+        </div>
+        <div class="content">
+            <h2>Hello {{username}}!</h2>
+            <p>Great news about your order! We wanted to update you on its status.</p>
+            
+            <div class="order-box">
+                <div class="order-number">Order #{{orderNumber}}</div>
+                <p style="margin: 10px 0;"><strong>Status:</strong> <span class="status-badge">{{status}}</span></p>
+            </div>
+
+            {{#if trackingNumber}}
+            <div class="tracking-box">
+                <p><strong>📍 Tracking Information</strong></p>
+                <p style="margin-top: 10px;">Tracking Number: <strong>{{trackingNumber}}</strong></p>
+                {{#if trackingUrl}}
+                <p style="margin-top: 5px;">You can track your package in real-time using the button below.</p>
+                {{/if}}
+            </div>
+
+            {{#if trackingUrl}}
+            <center>
+                <a href="{{trackingUrl}}" class="cta-button">Track Your Package</a>
+            </center>
+            {{/if}}
+            {{/if}}
+
+            {{#if deliveryDate}}
+            <p style="background-color: #d4edda; border-left: 4px solid #28a745; padding: 15px; border-radius: 4px; color: #155724;">
+                <strong>🎉 Estimated Delivery:</strong> {{deliveryDate}}
+            </p>
+            {{/if}}
+
+            <p style="margin-top: 30px;">Thank you for shopping with us! If you have any questions about your order, please don't hesitate to reach out to our customer service team.</p>
+        </div>
+        <div class="footer">
+            <p>© {{currentYear}} {{companyName}}. All rights reserved.</p>
+            <p><a href="#">Order History</a> | <a href="#">Contact Us</a> | <a href="#">Help Center</a></p>
+        </div>
+    </div>
+</body>
+</html>
