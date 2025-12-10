@@ -16,6 +16,7 @@ import { hasRefreshToken } from '../../../common/utils';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from '../../../common/helpers/jti';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ThrottleAuth, ThrottleSensitive } from '../../../common/decorators/throttle.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -26,6 +27,7 @@ export class AuthController {
     ) {}
 
     @Post('register')
+    @ThrottleAuth() // 5 requests per minute
     @ApiOperation({ summary: API_OPERATIONS.AUTH.REGISTER.SUMMARY })
     @ApiResponse({
         status: 201,
@@ -37,6 +39,7 @@ export class AuthController {
 
     // Email verification with OTP
     @Post('verify-email')
+    @ThrottleSensitive() // 3 requests per minute
     @ApiOperation({
         summary: API_OPERATIONS.AUTH.VERIFY_EMAIL_OTP.SUMMARY,
         description: API_OPERATIONS.AUTH.VERIFY_EMAIL_OTP.DESCRIPTION,
@@ -54,6 +57,7 @@ export class AuthController {
     }
 
     @Post('login')
+    @ThrottleAuth() // 5 requests per minute
     @ApiOperation({ summary: API_OPERATIONS.AUTH.LOGIN.SUMMARY })
     @ApiResponse({
         status: 200,
@@ -150,6 +154,7 @@ export class AuthController {
 
     // Forgot password
     @Post('forgot-password')
+    @ThrottleSensitive() // 3 requests per minute
     @ApiOperation({ summary: API_OPERATIONS.AUTH.FORGOT_PASSWORD.SUMMARY })
     @ApiResponse({
         status: 200,
@@ -161,6 +166,7 @@ export class AuthController {
 
     // Reset password
     @Post('reset-password')
+    @ThrottleSensitive() // 3 requests per minute
     @ApiOperation({
         summary: API_OPERATIONS.AUTH.RESET_PASSWORD_OTP.SUMMARY,
         description: API_OPERATIONS.AUTH.RESET_PASSWORD_OTP.DESCRIPTION,
@@ -214,6 +220,7 @@ export class AuthController {
 
     // Resend OTP for email verification
     @Post('resend-verification-otp')
+    @ThrottleSensitive() // 3 requests per minute to prevent OTP spam
     @ApiOperation({
         summary: API_OPERATIONS.AUTH.RESEND_VERIFICATION_OTP.SUMMARY,
         description: API_OPERATIONS.AUTH.RESEND_VERIFICATION_OTP.DESCRIPTION,

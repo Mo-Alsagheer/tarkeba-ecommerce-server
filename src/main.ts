@@ -5,6 +5,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 import cors from 'cors';
+import hpp from 'hpp';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
@@ -17,14 +18,33 @@ async function bootstrap() {
     const frontendUrl = configService.get<string>('app.frontendUrl', 'http://localhost:3000');
     const nodeEnv = configService.get<string>('app.nodeEnv', 'development');
 
-    // Security middleware
-    app.use(helmet());
+    // Security middleware - Enhanced Helmet with CSP
+    app.use(
+        helmet({
+            contentSecurityPolicy: {
+                directives: {
+                    defaultSrc: ["'self'"],
+                    styleSrc: ["'self'", "'unsafe-inline'"],
+                    scriptSrc: ["'self'"],
+                    imgSrc: ["'self'", 'data:', 'https:'],
+                },
+            },
+            crossOriginEmbedderPolicy: false,
+        })
+    );
+
+    // CORS configuration with specific methods and headers
     app.use(
         cors({
             origin: frontendUrl,
             credentials: true,
+            methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization'],
         })
     );
+
+    // Prevent HTTP Parameter Pollution attacks
+    app.use(hpp());
 
     // Global exception filter
     app.useGlobalFilters(new HttpExceptionFilter());
@@ -32,12 +52,16 @@ async function bootstrap() {
     // Global interceptors
     app.useGlobalInterceptors(new LoggingInterceptor(), new TimeoutInterceptor());
 
-    // Global validation pipe
+    // Global validation pipe with enhanced security
     app.useGlobalPipes(
         new ValidationPipe({
-            whitelist: true,
-            forbidNonWhitelisted: true,
-            transform: true,
+            whitelist: true, // Strip properties that don't have decorators
+            forbidNonWhitelisted: true, // Throw error if non-whitelisted properties exist
+            transform: true, // Auto-transform payloads to DTO instances
+            transformOptions: {
+                enableImplicitConversion: false, // Disable implicit type conversion for security
+            },
+            disableErrorMessages: nodeEnv === 'production', // Hide detailed errors in production
         })
     );
 
