@@ -7,16 +7,21 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { QueryCategoryDto } from './dto/query-category.dto';
 import { ICategoryTree, ICategoriesResponse } from '../../../../common/interfaces';
 import { CATEGORIES_ERROR_MESSAGES, CATEGORIES_LOG_MESSAGES } from '../../../../common/constants';
+import { FileUploadService } from '../../../common/file-upload/file-upload.service';
 
 @Injectable()
 export class CategoriesService {
     private readonly logger = new Logger(CategoriesService.name);
     constructor(
         @InjectModel(Category.name)
-        private categoryModel: Model<CategoryDocument>
+        private categoryModel: Model<CategoryDocument>,
+        private fileUploadService: FileUploadService
     ) {}
 
-    async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
+    async create(
+        createCategoryDto: CreateCategoryDto,
+        image?: Express.Multer.File
+    ): Promise<Category> {
         try {
             // Check if slug already exists
             const existingSlug = await this.categoryModel.findOne({
@@ -38,8 +43,33 @@ export class CategoriesService {
                 }
             }
 
-            // Create category
-            const category = await this.categoryModel.create(createCategoryDto);
+            // Upload image if provided
+            let imageUrl: string | undefined;
+            if (image) {
+                try {
+                    const uploadResult = await this.fileUploadService.uploadSingle(image, {
+                        folder: 'categories',
+                        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+                        maxFileSize: 5 * 1024 * 1024, // 5MB
+                    });
+                    imageUrl = uploadResult.url;
+                    this.logger.log(
+                        `Image uploaded successfully for category: ${createCategoryDto.name}`
+                    );
+                } catch (error) {
+                    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+                    this.logger.error(`Image upload failed: ${errorMsg}`);
+                    throw new BadRequestException(`Image upload failed: ${errorMsg}`);
+                }
+            }
+
+            // Create category with image URL
+            const categoryData = {
+                ...createCategoryDto,
+                ...(imageUrl && { image: imageUrl }),
+            };
+
+            const category = await this.categoryModel.create(categoryData);
             this.logger.log(`${CATEGORIES_LOG_MESSAGES.CATEGORY_CREATED}: ${String(category._id)}`);
             return category;
         } catch (error: unknown) {
@@ -162,7 +192,11 @@ export class CategoriesService {
         }
     }
 
-    async update(id: string, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
+    async update(
+        id: string,
+        updateCategoryDto: UpdateCategoryDto,
+        image?: Express.Multer.File
+    ): Promise<Category> {
         if (!Types.ObjectId.isValid(id)) {
             throw new BadRequestException(CATEGORIES_ERROR_MESSAGES.INVALID_CATEGORY_ID);
         }
@@ -208,8 +242,52 @@ export class CategoriesService {
                 }
             }
 
+            // Upload new image if provided
+            let imageUrl: string | undefined;
+            if (image) {
+                try {
+                    const uploadResult = await this.fileUploadService.uploadSingle(image, {
+                        folder: 'categories',
+                        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+                        maxFileSize: 5 * 1024 * 1024, // 5MB
+                    });
+                    imageUrl = uploadResult.url;
+                    this.logger.log(`Image uploaded successfully for category: ${id}`);
+
+                    // Delete old image if it exists
+                    const existingCategory = await this.categoryModel.findById(id);
+                    if (existingCategory?.image) {
+                        try {
+                            // Extract public ID from Cloudinary URL if using Cloudinary
+                            const urlParts = existingCategory.image.split('/');
+                            const publicIdWithExt = urlParts[urlParts.length - 1];
+                            const publicId = `categories/${publicIdWithExt.split('.')[0]}`;
+                            await this.fileUploadService.deleteFile(publicId);
+                            this.logger.log(`Old image deleted: ${publicId}`);
+                        } catch (deleteError) {
+                            const deleteErrorMsg =
+                                deleteError instanceof Error
+                                    ? deleteError.message
+                                    : 'Unknown error';
+                            this.logger.warn(`Failed to delete old image: ${deleteErrorMsg}`);
+                            // Continue even if deletion fails
+                        }
+                    }
+                } catch (error) {
+                    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+                    this.logger.error(`Image upload failed: ${errorMsg}`);
+                    throw new BadRequestException(`Image upload failed: ${errorMsg}`);
+                }
+            }
+
+            // Update category with new image URL if provided
+            const updateData = {
+                ...updateCategoryDto,
+                ...(imageUrl && { image: imageUrl }),
+            };
+
             const category = await this.categoryModel
-                .findByIdAndUpdate(id, updateCategoryDto, { new: true })
+                .findByIdAndUpdate(id, updateData, { new: true })
                 .populate('parentID', 'name slug')
                 .exec();
 

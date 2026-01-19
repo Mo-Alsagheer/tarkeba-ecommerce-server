@@ -131,6 +131,11 @@ export class AuthService {
 
     // Refresh token flow
     async refresh(refreshDto: RefreshDto, presentedIp: string, presentedDevice: string) {
+        // Check if refresh token is provided
+        if (!refreshDto.refreshToken) {
+            throw new UnauthorizedException(MESSAGES.AUTH.REFRESH_TOKEN_MISSING);
+        }
+
         // 1. Decode and verify signature
         let payload: JwtPayload;
         try {

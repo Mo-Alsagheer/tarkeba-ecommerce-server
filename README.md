@@ -50,10 +50,21 @@ Tarkeba is a fully-featured e-commerce backend system designed. The platform use
 - Full CRUD operations for products
 - Product categories with hierarchical structure (parent-child relationships)
 - Advanced product search and filtering
+  - Filter by category with ObjectId support
+  - Search by name, description, and tags
+  - Price range filtering
+  - Active/featured product filtering
+- **Variant-based Product System**:
+  - Multiple variants per product (size, price, stock)
+  - Compare price support for discounts
+  - Variant-specific stock tracking
 - Stock management and inventory tracking
+  - Automatic stock validation at checkout
+  - Atomic stock reduction with MongoDB transactions
+  - Low stock warnings
 - Featured products highlighting
 - Product slug generation for SEO-friendly URLs
-- Product images support
+- Product images support with Cloudinary integration
 - Product reviews and ratings system
 - Average rating calculation
 
@@ -69,22 +80,36 @@ Tarkeba is a fully-featured e-commerce backend system designed. The platform use
 ### 📋 Order Management
 
 - Complete order lifecycle management
-- Order creation from cart checkout
+- **Smart Checkout Process**:
+  - Cart validation with product and price verification
+  - Stock availability checking before order creation
+  - Payment method selection (COD or Wallet)
+  - Automatic order creation with items snapshot
+  - Conditional stock reduction based on payment method
 - Order status tracking (pending, processing, shipped, delivered, cancelled)
+- Payment status tracking (pending, paid, failed, refunded)
 - Shipping address management
-- Order history for customers
+- Order history for customers with pagination
 - Admin order management dashboard
 - Order cancellation workflow
 - Email notifications for order status changes
+- Order items stored separately with product snapshot
 
 ### 💳 Payment Processing
 
 - **Paymob Payment Gateway Integration**
+- **Multiple Payment Methods**:
+  - Mobile Wallet (Paymob integration)
+  - Cash on Delivery (COD)
+- **Payment Methods API**: Endpoint to retrieve available payment methods
+- **Smart Checkout Flow**:
+  - COD: Immediate order completion with stock reduction
+  - Wallet: Payment initiation with redirect URL, stock reduced after confirmation
 - Secure payment initiation and processing
 - Payment transaction tracking
 - Webhook handling for real-time payment status updates
 - HMAC signature verification for webhooks
-- Multiple payment methods support
+- Automatic stock reduction after successful wallet payment
 - Refund processing capability
 - Idempotency for payment operations
 
@@ -518,10 +543,14 @@ Once the application is running, access the interactive API documentation:
 - `DELETE /api/categories/:id` - Delete category (Admin)
 
 #### Orders
-- `GET /api/orders` - Get user orders
+- `GET /api/orders` - Get user orders with filters
 - `GET /api/orders/:id` - Get order details
+- `GET /api/orders/:id/items` - Get order items
 - `POST /api/orders` - Create order
-- `POST /api/orders/checkout` - Checkout cart
+- `POST /api/orders/checkout` - Checkout with payment method selection
+  - Returns order and payment instructions
+  - For wallet: includes nextStep with payment endpoint details
+  - For COD: immediate order completion
 - `PUT /api/orders/:id` - Update order status (Admin)
 
 #### Coupons
@@ -532,10 +561,16 @@ Once the application is running, access the interactive API documentation:
 - `DELETE /api/coupons/:id` - Delete coupon (Admin)
 
 #### Payments
-- `POST /api/payments/initiate` - Initiate payment
-- `POST /api/payments/webhook` - Payment webhook (Paymob)
-- `GET /api/payments` - Get payments (Admin)
+- `GET /api/payments/methods` - Get available payment methods
+- `POST /api/payments` - Create payment (initiates wallet payment or records COD)
+- `GET /api/payments` - Get all payments (Admin)
+- `GET /api/payments/my-payments` - Get user's payments
+- `GET /api/payments/stats` - Get payment statistics (Admin)
+- `GET /api/payments/order/:orderId` - Get payments for specific order
 - `GET /api/payments/:id` - Get payment by ID
+- `PATCH /api/payments/:id` - Update payment (Admin)
+- `POST /api/payments/:id/refund` - Refund payment (Admin)
+- `POST /api/payments/webhook/paymob` - Paymob webhook handler
 
 #### Admin Dashboard
 - `GET /api/admin/dashboard` - Get dashboard analytics
@@ -588,6 +623,194 @@ CMD ["node", "dist/main"]
 - **Email:** SendGrid, AWS SES, or Gmail
 - **Hosting:** AWS, GCP, Azure, or Heroku
 - **Payment:** Paymob (configured)
+- **Image Storage:** Cloudinary
+- **Cache/Queue:** Redis (for BullMQ)
+
+## 🛒 Checkout Flow
+
+### Payment Methods
+
+Retrieve available payment methods:
+```bash
+GET /api/payments/methods
+```
+
+Response:
+```json
+[
+  {
+    "value": "wallet",
+    "label": "Wallet",
+    "provider": "paymob"
+  },
+  {
+    "value": "cash_on_delivery",
+    "label": "Cash on delivery",
+    "provider": "internal"
+  }
+]
+```
+
+### Cash on Delivery Flow
+
+1. **Checkout Request**:
+```bash
+POST /api/orders/checkout
+```
+```json
+{
+  "cartItems": [...],
+  "shippingAddress": {...},
+  "paymentMethod": "cash_on_delivery"
+}
+```
+
+2. **Immediate Response**:
+```json
+{
+  "success": true,
+  "order": {...},
+  "paymentRequired": false,
+  "paymentMethod": "cash_on_delivery",
+  "message": "Order placed successfully. Payment will be collected on delivery."
+}
+```
+
+**What Happens:**
+- ✅ Order created
+- ✅ Stock reduced immediately
+- ✅ Order status: PENDING
+- ✅ Payment status: PENDING
+- ✅ Email confirmation sent
+
+### Wallet Payment Flow
+
+1. **Checkout Request**:
+```bash
+POST /api/orders/checkout
+```
+```json
+{
+  "cartItems": [...],
+  "shippingAddress": {...},
+  "paymentMethod": "wallet",
+  "walletMsisdn": "01234567890"
+}
+```
+
+2. **Response with Payment Instructions**:
+```json
+{
+  "success": true,
+  "order": {...},
+  "paymentRequired": true,
+  "paymentMethod": "wallet",
+  "message": "Order created. Please complete payment to confirm your order.",
+  "nextStep": {
+    "action": "createPayment",
+    "endpoint": "/api/payments",
+    "method": "POST",
+    "payload": {
+      "orderID": "...",
+      "amount": 299.99,
+      "currency": "EGP",
+      "paymentMethod": "wallet",
+      "walletMsisdn": "01234567890"
+    }
+  }
+}
+```
+
+**At this point:**
+- ✅ Order created
+- ⏳ Stock NOT reduced yet (reserved)
+- ✅ Order status: PENDING
+- ⏳ Payment status: PENDING
+
+3. **Initiate Payment**:
+```bash
+POST /api/payments
+```
+```json
+{
+  "orderID": "...",
+  "amount": 299.99,
+  "currency": "EGP",
+  "paymentMethod": "wallet",
+  "walletMsisdn": "01234567890"
+}
+```
+
+4. **Payment Response**:
+```json
+{
+  "paymentId": "...",
+  "paymobOrderId": "...",
+  "paymentKey": "...",
+  "redirectUrl": "https://accept.paymob.com/...",
+  "expiresAt": "2026-01-19T03:00:00.000Z"
+}
+```
+
+5. **Redirect User**: Frontend redirects user to `redirectUrl` to complete payment
+
+6. **Payment Webhook** (Paymob → Server):
+```bash
+POST /api/payments/webhook/paymob
+```
+
+**On Successful Payment:**
+- ✅ Payment status: COMPLETED
+- ✅ Stock reduced atomically
+- ✅ Order payment status: PAID
+- ✅ Email confirmation sent
+
+**On Failed Payment:**
+- ❌ Payment status: FAILED
+- ❌ Stock remains unreserved
+- ❌ Order payment status: FAILED
+- 📧 Failure notification email
+
+### Stock Management
+
+**Cash on Delivery:**
+- Stock is reduced immediately at checkout
+- Order is confirmed right away
+
+**Wallet Payment:**
+- Stock is validated but NOT reduced at checkout
+- Stock is reduced only after successful payment via webhook
+- Uses MongoDB transactions for atomic operations
+- Prevents overselling during payment processing
+
+### Error Handling
+
+**Stock Validation Errors:**
+```json
+{
+  "statusCode": 400,
+  "message": "Insufficient stock for items: [...]",
+  "error": "Bad Request"
+}
+```
+
+**Payment Errors:**
+```json
+{
+  "statusCode": 400,
+  "message": "Payment already exists for this order",
+  "error": "Bad Request"
+}
+```
+
+**Wallet Phone Required:**
+```json
+{
+  "statusCode": 400,
+  "message": "Wallet phone number (walletMsisdn) is required for wallet payments",
+  "error": "Bad Request"
+}
+```
 
 ## Security Features
 

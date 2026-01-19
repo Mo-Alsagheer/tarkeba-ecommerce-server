@@ -13,6 +13,7 @@ import { GoogleStrategy } from './passport/google.strategy';
 import { QueueModule } from '../../messaging/queue/queue.module';
 import { JWT_CONFIG } from '../../../config';
 import { OtpHelper } from './helpers/otp.helper';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Module({
     imports: [
@@ -33,7 +34,15 @@ import { OtpHelper } from './helpers/otp.helper';
         QueueModule,
     ],
     controllers: [AuthController],
-    providers: [AuthService, JwtStrategy, LocalStrategy, GoogleStrategy, OtpHelper],
-    exports: [AuthService, JwtModule, PassportModule],
+    providers: [AuthService, JwtStrategy, LocalStrategy, GoogleStrategy, OtpHelper, JwtAuthGuard],
+    exports: [
+        AuthService,
+        JwtModule,
+        PassportModule,
+        JwtAuthGuard,
+        MongooseModule.forFeature([
+            { name: User.name, schema: UserSchema },
+        ]), // Export User model to allow JwtAuthGuard to inject it in other modules
+    ],
 })
 export class AuthModule {}

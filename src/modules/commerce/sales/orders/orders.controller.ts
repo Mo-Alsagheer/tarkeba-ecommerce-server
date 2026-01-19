@@ -152,6 +152,32 @@ export class OrdersController {
         this.logger.log(
             `${ORDERS_CONTROLLER_LOG_MESSAGES.PROCESSING_CHECKOUT}: ${req.user.userId}`
         );
-        return this.ordersService.checkout(req.user.userId, checkoutDto);
+        const result = await this.ordersService.checkout(req.user.userId, checkoutDto);
+
+        // Return structured response with payment instructions
+        return {
+            success: true,
+            order: result.order,
+            paymentRequired: result.paymentRequired,
+            paymentMethod: result.paymentMethod,
+            message: result.message,
+            // If payment is required, provide the orderID for the payment endpoint
+            ...(result.paymentRequired && {
+                nextStep: {
+                    action: 'createPayment',
+                    endpoint: '/api/payments',
+                    method: 'POST',
+                    payload: {
+                        orderID: (result.order as any)._id.toString(),
+                        amount: result.order.totalAmount,
+                        currency: 'EGP',
+                        paymentMethod: checkoutDto.paymentMethod,
+                        ...(checkoutDto.walletMsisdn && {
+                            walletMsisdn: checkoutDto.walletMsisdn,
+                        }),
+                    },
+                },
+            }),
+        };
     }
 }

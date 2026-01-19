@@ -4,22 +4,13 @@ import { ADDRESS_DTO_DESCRIPTIONS, ADDRESS_DTO_EXAMPLES } from '../../../../../c
 
 export class AddressDto {
     @ApiProperty({
-        description: ADDRESS_DTO_DESCRIPTIONS.FIRST_NAME,
-        example: ADDRESS_DTO_EXAMPLES.FIRST_NAME,
+        description: ADDRESS_DTO_DESCRIPTIONS.CUSTOMER_NAME,
+        example: ADDRESS_DTO_EXAMPLES.CUSTOMER_NAME,
     })
     @IsString()
     @MinLength(1)
     @MaxLength(50)
-    firstName: string;
-
-    @ApiProperty({
-        description: ADDRESS_DTO_DESCRIPTIONS.LAST_NAME,
-        example: ADDRESS_DTO_EXAMPLES.LAST_NAME,
-    })
-    @IsString()
-    @MinLength(1)
-    @MaxLength(50)
-    lastName: string;
+    customerName: string;
 
     @ApiProperty({
         description: ADDRESS_DTO_DESCRIPTIONS.ADDRESS_LINE_1,
@@ -29,15 +20,6 @@ export class AddressDto {
     @MinLength(5)
     @MaxLength(100)
     addressLine1: string;
-
-    @ApiPropertyOptional({
-        description: ADDRESS_DTO_DESCRIPTIONS.ADDRESS_LINE_2,
-        example: ADDRESS_DTO_EXAMPLES.ADDRESS_LINE_2,
-    })
-    @IsOptional()
-    @IsString()
-    @MaxLength(100)
-    addressLine2?: string;
 
     @ApiProperty({
         description: ADDRESS_DTO_DESCRIPTIONS.CITY,
@@ -56,15 +38,6 @@ export class AddressDto {
     @MinLength(2)
     @MaxLength(50)
     state: string;
-
-    @ApiProperty({
-        description: ADDRESS_DTO_DESCRIPTIONS.POSTAL_CODE,
-        example: ADDRESS_DTO_EXAMPLES.POSTAL_CODE,
-    })
-    @IsString()
-    @MinLength(3)
-    @MaxLength(20)
-    postalCode: string;
 
     @ApiPropertyOptional({
         description: ADDRESS_DTO_DESCRIPTIONS.PHONE,

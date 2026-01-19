@@ -1,77 +1,22 @@
-import {
-    IsString,
-    IsNumber,
-    IsArray,
-    IsOptional,
-    IsBoolean,
-    Min,
-    ValidateNested,
-    IsMongoId,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, IsArray, IsOptional, IsBoolean, IsMongoId } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
     CREATE_PRODUCT_SWAGGER,
-    VARIANT_SWAGGER,
-    DIMENSIONS_SWAGGER,
     SEO_SWAGGER,
 } from '../../../../../common/constants/products-swagger.constants';
 
-class DimensionsDto {
-    @ApiProperty(DIMENSIONS_SWAGGER.length)
-    @IsNumber()
-    @Min(0)
-    length: number;
-
-    @ApiProperty(DIMENSIONS_SWAGGER.width)
-    @IsNumber()
-    @Min(0)
-    width: number;
-
-    @ApiProperty(DIMENSIONS_SWAGGER.height)
-    @IsNumber()
-    @Min(0)
-    height: number;
-}
-
-class SeoDto {
-    @ApiPropertyOptional(SEO_SWAGGER.title)
-    @IsOptional()
-    @IsString()
-    title?: string;
-
-    @ApiPropertyOptional(SEO_SWAGGER.description)
-    @IsOptional()
-    @IsString()
-    description?: string;
-
-    @ApiPropertyOptional(SEO_SWAGGER.keywords)
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    keywords?: string[];
-}
-
-class VariantDto {
-    @ApiProperty(VARIANT_SWAGGER.size)
-    @IsString()
+interface VariantInterface {
     size: string;
-
-    @ApiProperty(VARIANT_SWAGGER.price)
-    @IsNumber()
-    @Min(0)
     price: number;
-
-    @ApiPropertyOptional(VARIANT_SWAGGER.comparePrice)
-    @IsOptional()
-    @IsNumber()
-    @Min(0)
     comparePrice?: number;
-
-    @ApiProperty(VARIANT_SWAGGER.stock)
-    @IsNumber()
-    @Min(0)
     stock: number;
+}
+
+interface SeoInterface {
+    title?: string;
+    description?: string;
+    keywords?: string[];
 }
 
 export class CreateProductDto {
@@ -87,57 +32,84 @@ export class CreateProductDto {
     @IsString()
     slug: string;
 
-    @ApiProperty({ ...CREATE_PRODUCT_SWAGGER.variants, type: [VariantDto] })
+    @ApiProperty({ ...CREATE_PRODUCT_SWAGGER.variants })
+    @Transform(({ value }) => {
+        if (typeof value === 'string') {
+            try {
+                const parsed = JSON.parse(value);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+        return Array.isArray(value) ? value : [];
+    })
     @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => VariantDto)
-    variants: VariantDto[];
+    variants: VariantInterface[];
 
     @ApiProperty(CREATE_PRODUCT_SWAGGER.categories)
+    @Transform(({ value }) => {
+        if (typeof value === 'string') {
+            try {
+                return JSON.parse(value) as string[];
+            } catch {
+                return [value];
+            }
+        }
+        if (Array.isArray(value)) return value as string[];
+        return [];
+    })
     @IsArray()
     @IsMongoId({ each: true })
     categories: string[];
 
-    @ApiPropertyOptional(CREATE_PRODUCT_SWAGGER.images)
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    images?: string[];
-
     @ApiPropertyOptional(CREATE_PRODUCT_SWAGGER.isActive)
     @IsOptional()
+    @Transform(({ value }) => {
+        if (value === 'true') return true;
+        if (value === 'false') return false;
+        return Boolean(value);
+    })
     @IsBoolean()
     isActive?: boolean;
 
     @ApiPropertyOptional(CREATE_PRODUCT_SWAGGER.isFeatured)
     @IsOptional()
+    @Transform(({ value }) => {
+        if (value === 'true') return true;
+        if (value === 'false') return false;
+        return Boolean(value);
+    })
     @IsBoolean()
     isFeatured?: boolean;
 
-    @ApiPropertyOptional(CREATE_PRODUCT_SWAGGER.weight)
+    @ApiPropertyOptional({ ...CREATE_PRODUCT_SWAGGER.seo })
     @IsOptional()
-    @IsNumber()
-    @Min(0)
-    weight?: number;
-
-    @ApiPropertyOptional({ ...CREATE_PRODUCT_SWAGGER.dimensions, type: DimensionsDto })
-    @IsOptional()
-    @ValidateNested()
-    @Type(() => DimensionsDto)
-    dimensions?: DimensionsDto;
-
-    @ApiPropertyOptional(CREATE_PRODUCT_SWAGGER.attributes)
-    @IsOptional()
-    attributes?: Record<string, unknown>;
-
-    @ApiPropertyOptional({ ...CREATE_PRODUCT_SWAGGER.seo, type: SeoDto })
-    @IsOptional()
-    @ValidateNested()
-    @Type(() => SeoDto)
-    seo?: SeoDto;
+    @Transform(({ value }) => {
+        if (typeof value === 'string') {
+            try {
+                return JSON.parse(value) as SeoInterface;
+            } catch {
+                return undefined;
+            }
+        }
+        return value as SeoInterface;
+    })
+    seo?: SeoInterface;
 
     @ApiPropertyOptional(CREATE_PRODUCT_SWAGGER.tags)
     @IsOptional()
+    @Transform(({ value }) => {
+        if (typeof value === 'string') {
+            try {
+                return JSON.parse(value) as string[];
+            } catch {
+                return [value];
+            }
+        }
+        if (Array.isArray(value)) return value as string[];
+        return [];
+    })
     @IsArray()
     @IsString({ each: true })
     tags?: string[];

@@ -4,6 +4,7 @@ import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { User, UserSchema } from '../identity/users/entities/user.entity';
 import { Order, OrderSchema } from '../commerce/sales/orders/entities/order.entity';
+import { OrderItem, OrderItemSchema } from '../commerce/sales/orders/entities/order-item.entity';
 import { Product, ProductSchema } from '../commerce/catalog/products/entities/product.entity';
 import { RefreshToken, RefreshTokenSchema } from '../identity/auth/entities/refresh-token.entity';
 
@@ -12,6 +13,7 @@ import { RefreshToken, RefreshTokenSchema } from '../identity/auth/entities/refr
         MongooseModule.forFeature([
             { name: User.name, schema: UserSchema },
             { name: Order.name, schema: OrderSchema },
+            { name: OrderItem.name, schema: OrderItemSchema },
             { name: Product.name, schema: ProductSchema },
             { name: RefreshToken.name, schema: RefreshTokenSchema },
         ]),

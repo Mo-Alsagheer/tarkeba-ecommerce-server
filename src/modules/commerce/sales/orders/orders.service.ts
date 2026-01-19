@@ -8,6 +8,7 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 import { QueryOrderDto } from './dto/query-order.dto';
 import { CheckoutDto } from './dto/checkout.dto';
 import { ProductsService } from '../../catalog/products/products.service';
+import { PaymentMethod } from '../payments/entities/payment.entity';
 import {
     generateOrderNumber,
     validateStatusTransition,
@@ -278,7 +279,15 @@ export class OrdersService {
 
     // ==================== CHECKOUT PROCESS ====================
 
-    async checkout(userID: string, checkoutDto: CheckoutDto): Promise<Order> {
+    async checkout(
+        userID: string,
+        checkoutDto: CheckoutDto
+    ): Promise<{
+        order: Order;
+        paymentRequired: boolean;
+        paymentMethod: PaymentMethod;
+        message?: string;
+    }> {
         if (!Types.ObjectId.isValid(userID)) {
             throw new BadRequestException(ORDERS_ERROR_MESSAGES.INVALID_USER_ID);
         }
@@ -407,11 +416,38 @@ export class OrdersService {
             );
             await Promise.all(orderItemPromises);
 
-            // Reduce stock
-            await this.productsService.reduceStockForOrder(stockItems);
+            // Handle payment method
+            if (checkoutDto.paymentMethod === PaymentMethod.CASH_ON_DELIVERY) {
+                // For COD, complete the order immediately
+                await this.productsService.reduceStockForOrder(stockItems);
 
-            this.logger.log(ORDERS_LOG_MESSAGES.CHECKOUT_COMPLETED(userID, order.orderNumber));
-            return order;
+                this.logger.log(
+                    ORDERS_LOG_MESSAGES.CHECKOUT_COMPLETED(userID, order.orderNumber)
+                );
+
+                return {
+                    order,
+                    paymentRequired: false,
+                    paymentMethod: PaymentMethod.CASH_ON_DELIVERY,
+                    message: 'Order placed successfully. Payment will be collected on delivery.',
+                };
+            } else if (checkoutDto.paymentMethod === PaymentMethod.WALLET) {
+                // For wallet, don't reduce stock yet - wait for payment confirmation
+                // Stock will be reduced after successful payment
+                this.logger.log(
+                    `Order ${order.orderNumber} created, awaiting wallet payment confirmation`
+                );
+
+                return {
+                    order,
+                    paymentRequired: true,
+                    paymentMethod: PaymentMethod.WALLET,
+                    message:
+                        'Order created. Please complete payment to confirm your order.',
+                };
+            } else {
+                throw new BadRequestException('Invalid payment method');
+            }
         } catch (error: unknown) {
             this.logger.error(ORDERS_LOG_MESSAGES.FAILED_CHECKOUT(userID));
             throw error;

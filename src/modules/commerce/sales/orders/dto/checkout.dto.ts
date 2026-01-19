@@ -9,6 +9,7 @@ import {
     ArrayMinSize,
     MaxLength,
     MinLength,
+    IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -20,6 +21,7 @@ import {
     ORDER_VALIDATION_MESSAGES,
 } from '../../../../../common/constants';
 import { AddressDto } from './address.dto';
+import { PaymentMethod } from '../../../sales/payments/entities/payment.entity';
 
 class CartItemDto {
     @ApiProperty({
@@ -134,4 +136,21 @@ export class CheckoutDto {
     @IsString()
     @MaxLength(500)
     notes?: string;
+
+    @ApiProperty({
+        description: 'Payment method',
+        enum: PaymentMethod,
+        example: PaymentMethod.CASH_ON_DELIVERY,
+    })
+    @IsNotEmpty({ message: 'Payment method is required' })
+    @IsEnum(PaymentMethod, { message: 'Invalid payment method' })
+    paymentMethod: PaymentMethod;
+
+    @ApiPropertyOptional({
+        description: 'Wallet phone number (required for wallet payments)',
+        example: '01234567890',
+    })
+    @IsOptional()
+    @IsString()
+    walletMsisdn?: string;
 }

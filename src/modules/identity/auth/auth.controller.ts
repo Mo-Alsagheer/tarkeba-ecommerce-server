@@ -88,11 +88,11 @@ export class AuthController {
         description: API_RESPONSE_MESSAGES.AUTH.TOKENS_ROTATED,
     })
     async refresh(@Body() dto: RefreshDto, @Req() req: Request, @Res() res: Response) {
-        // Accept refresh token from cookie primarily, fall back to DTO body
-        const cookieRefreshToken: string | undefined = hasRefreshToken(req.cookies)
+        // Accept refresh token from cookie only
+        const refreshToken: string | undefined = hasRefreshToken(req.cookies)
             ? (req.cookies as { refreshToken: string }).refreshToken
             : undefined;
-        const refreshToken: string | undefined = cookieRefreshToken || dto.refreshToken;
+            
         if (!refreshToken) {
             return res.status(401).json({ message: API_RESPONSE_MESSAGES.AUTH.NO_REFRESH_TOKEN });
         }

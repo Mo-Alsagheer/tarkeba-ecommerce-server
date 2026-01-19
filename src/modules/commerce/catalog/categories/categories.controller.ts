@@ -10,8 +10,19 @@ import {
     UseGuards,
     HttpStatus,
     Logger,
+    UseInterceptors,
+    UploadedFile,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+    ApiTags,
+    ApiOperation,
+    ApiResponse,
+    ApiBearerAuth,
+    ApiParam,
+    ApiConsumes,
+    ApiBody,
+} from '@nestjs/swagger';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -43,8 +54,40 @@ export class CategoriesController {
     @Post()
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.ADMIN)
+    @UseInterceptors(
+        FileInterceptor('image', {
+            limits: {
+                fileSize: 10 * 1024 * 1024, // 10MB
+            },
+        })
+    )
     @ApiBearerAuth()
+    @ApiConsumes('multipart/form-data')
     @ApiOperation({ summary: CATEGORIES_OPERATIONS.CREATE_CATEGORY })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', example: 'Electronics' },
+                description: { type: 'string', example: 'Electronic devices and accessories' },
+                slug: { type: 'string', example: 'electronics' },
+                parentID: { type: 'string', example: '507f1f77bcf86cd799439011' },
+                isActive: { type: 'boolean', example: true },
+                sortOrder: { type: 'number', example: 0 },
+                image: { type: 'string', format: 'binary', description: 'Category image file' },
+                tags: { type: 'array', items: { type: 'string' }, example: ['gadgets', 'tech'] },
+                seo: {
+                    type: 'object',
+                    properties: {
+                        title: { type: 'string' },
+                        description: { type: 'string' },
+                        keywords: { type: 'array', items: { type: 'string' } },
+                    },
+                },
+            },
+            required: ['name', 'slug'],
+        },
+    })
     @ApiResponse({
         status: HttpStatus.CREATED,
         description: CATEGORIES_API_RESPONSES.CATEGORY_CREATED,
@@ -62,11 +105,14 @@ export class CategoriesController {
         status: HttpStatus.FORBIDDEN,
         description: CATEGORIES_API_RESPONSES.FORBIDDEN_ADMIN_REQUIRED,
     })
-    async create(@Body() createCategoryDto: CreateCategoryDto) {
+    async create(
+        @Body() createCategoryDto: CreateCategoryDto,
+        @UploadedFile() image?: Express.Multer.File
+    ) {
         this.logger.log(
             `${CATEGORIES_CONTROLLER_LOG_MESSAGES.CREATING_CATEGORY}: ${createCategoryDto.name}`
         );
-        return await this.categoriesService.create(createCategoryDto);
+        return await this.categoriesService.create(createCategoryDto, image);
     }
 
     @Get()
@@ -153,9 +199,40 @@ export class CategoriesController {
     @Patch(':id')
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.ADMIN)
+    @UseInterceptors(
+        FileInterceptor('image', {
+            limits: {
+                fileSize: 10 * 1024 * 1024, // 10MB
+            },
+        })
+    )
     @ApiBearerAuth()
+    @ApiConsumes('multipart/form-data')
     @ApiOperation({ summary: CATEGORIES_OPERATIONS.UPDATE_CATEGORY })
     @ApiParam(CATEGORIES_SWAGGER_PARAMS.CATEGORY_ID)
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', example: 'Electronics' },
+                description: { type: 'string', example: 'Electronic devices and accessories' },
+                slug: { type: 'string', example: 'electronics' },
+                parentID: { type: 'string', example: '507f1f77bcf86cd799439011' },
+                isActive: { type: 'boolean', example: true },
+                sortOrder: { type: 'number', example: 0 },
+                image: { type: 'string', format: 'binary', description: 'Category image file' },
+                tags: { type: 'array', items: { type: 'string' }, example: ['gadgets', 'tech'] },
+                seo: {
+                    type: 'object',
+                    properties: {
+                        title: { type: 'string' },
+                        description: { type: 'string' },
+                        keywords: { type: 'array', items: { type: 'string' } },
+                    },
+                },
+            },
+        },
+    })
     @ApiResponse({
         status: HttpStatus.OK,
         description: CATEGORIES_API_RESPONSES.CATEGORY_UPDATED,
@@ -177,9 +254,13 @@ export class CategoriesController {
         status: HttpStatus.FORBIDDEN,
         description: CATEGORIES_API_RESPONSES.FORBIDDEN_ADMIN_REQUIRED,
     })
-    async update(@Param('id') id: string, @Body() updateCategoryDto: UpdateCategoryDto) {
+    async update(
+        @Param('id') id: string,
+        @Body() updateCategoryDto: UpdateCategoryDto,
+        @UploadedFile() image?: Express.Multer.File
+    ) {
         this.logger.log(`${CATEGORIES_CONTROLLER_LOG_MESSAGES.UPDATING_CATEGORY}: ${id}`);
-        return await this.categoriesService.update(id, updateCategoryDto);
+        return await this.categoriesService.update(id, updateCategoryDto, image);
     }
 
     @Delete(':id')

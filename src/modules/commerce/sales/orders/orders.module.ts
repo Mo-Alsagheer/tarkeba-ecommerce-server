@@ -6,6 +6,7 @@ import { Order, OrderSchema } from './entities/order.entity';
 import { OrderItem, OrderItemSchema } from './entities/order-item.entity';
 import { QueueModule } from '../../../messaging/queue/queue.module';
 import { ProductsModule } from '../../../commerce/catalog/products/products.module';
+import { AuthModule } from '../../../identity/auth/auth.module';
 
 @Module({
     imports: [
@@ -15,6 +16,7 @@ import { ProductsModule } from '../../../commerce/catalog/products/products.modu
         ]),
         QueueModule,
         ProductsModule,
+        AuthModule,
     ],
     controllers: [OrdersController],
     providers: [OrdersService],

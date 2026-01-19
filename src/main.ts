@@ -9,6 +9,7 @@ import hpp from 'hpp';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
+import * as express from 'express';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
@@ -17,6 +18,10 @@ async function bootstrap() {
     const port = configService.get<number>('app.port', 3000);
     const frontendUrl = configService.get<string>('app.frontendUrl', 'http://localhost:3000');
     const nodeEnv = configService.get<string>('app.nodeEnv', 'development');
+
+    // Increase body size limit for file uploads
+    app.use(express.json({ limit: '50mb' }));
+    app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
     // Security middleware - Enhanced Helmet with CSP
     app.use(
@@ -56,10 +61,10 @@ async function bootstrap() {
     app.useGlobalPipes(
         new ValidationPipe({
             whitelist: true, // Strip properties that don't have decorators
-            forbidNonWhitelisted: true, // Throw error if non-whitelisted properties exist
+            forbidNonWhitelisted: false, // Allow nested transformations to work properly
             transform: true, // Auto-transform payloads to DTO instances
             transformOptions: {
-                enableImplicitConversion: false, // Disable implicit type conversion for security
+                enableImplicitConversion: true, // Enable for proper nested object transformation
             },
             disableErrorMessages: nodeEnv === 'production', // Hide detailed errors in production
         })

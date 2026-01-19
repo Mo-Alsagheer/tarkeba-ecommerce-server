@@ -39,6 +39,11 @@ export class PaymentsController {
         return this.paymentsService.findAll(queryDto);
     }
 
+    @Get('methods')
+    getPaymentMethods() {
+        return this.paymentsService.getPaymentMethods();
+    }
+
     @Get('my-payments')
     @UseGuards(JwtAuthGuard)
     findMyPayments(@Query() queryDto: QueryPaymentsDto, @Request() req: IAuthenticatedRequest) {

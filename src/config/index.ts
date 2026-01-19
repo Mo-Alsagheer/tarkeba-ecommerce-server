@@ -4,6 +4,7 @@ export * from './oauth.config';
 export * from './paymob.config';
 export * from './mail.config';
 export * from './queue.config';
+export { default as STORAGE_CONFIG } from './storage.config';
 
 // Legacy exports for backward compatibility
 export { JWT_CONFIG as ACCESS_JWT_SECRET, JWT_CONFIG as REFRESH_JWT_SECRET } from './jwt.config';

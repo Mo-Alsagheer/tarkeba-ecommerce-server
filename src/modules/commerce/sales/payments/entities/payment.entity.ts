@@ -13,17 +13,13 @@ export enum PaymentStatus {
 }
 
 export enum PaymentMethod {
-    VISA = 'visa',
-    MASTERCARD = 'mastercard',
-    VODAFONE_CASH = 'vodafone_cash',
-    ORANGE_CASH = 'orange_cash',
-    ETISALAT_CASH = 'etisalat_cash',
-    WE_PAY = 'we_pay',
-    BANK_TRANSFER = 'bank_transfer',
+    WALLET = 'wallet',
+    CASH_ON_DELIVERY = 'cash_on_delivery',
 }
 
 export enum PaymentProvider {
     PAYMOB = 'paymob',
+    INTERNAL = 'internal', // For COD
 }
 
 @Schema({ timestamps: true })

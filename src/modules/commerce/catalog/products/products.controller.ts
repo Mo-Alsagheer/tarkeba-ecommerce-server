@@ -10,8 +10,19 @@ import {
     UseGuards,
     HttpStatus,
     Logger,
+    UseInterceptors,
+    UploadedFiles,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import {
+    ApiTags,
+    ApiOperation,
+    ApiResponse,
+    ApiBearerAuth,
+    ApiQuery,
+    ApiConsumes,
+    ApiBody,
+} from '@nestjs/swagger';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -39,8 +50,50 @@ export class ProductsController {
     @Post()
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.ADMIN)
+    @UseInterceptors(
+        FilesInterceptor('images', 10, {
+            limits: {
+                fileSize: 10 * 1024 * 1024, // 10MB per file
+            },
+        })
+    )
     @ApiBearerAuth()
+    @ApiConsumes('multipart/form-data')
     @ApiOperation({ summary: PRODUCTS_OPERATIONS.CREATE_PRODUCT })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', example: 'Nike Air Max' },
+                description: { type: 'string', example: 'Comfortable running shoes' },
+                slug: { type: 'string', example: 'nike-air-max' },
+                variants: {
+                    type: 'string',
+                    example: JSON.stringify([{ size: 'M', price: 99.99, stock: 50 }]),
+                    description: 'JSON string of variants array',
+                },
+                categories: {
+                    type: 'string',
+                    example: JSON.stringify(['507f1f77bcf86cd799439011']),
+                    description: 'JSON string of category IDs',
+                },
+                images: {
+                    type: 'array',
+                    items: { type: 'string', format: 'binary' },
+                    description: 'Product images (max 10)',
+                },
+                isActive: { type: 'string', example: 'true' },
+                isFeatured: { type: 'string', example: 'false' },
+                weight: { type: 'string', example: '0.5' },
+                tags: {
+                    type: 'string',
+                    example: JSON.stringify(['shoes', 'sports']),
+                    description: 'JSON string of tags',
+                },
+            },
+            required: ['name', 'description', 'slug', 'variants', 'categories'],
+        },
+    })
     @ApiResponse({
         status: HttpStatus.CREATED,
         description: PRODUCTS_API_RESPONSES.PRODUCT_CREATED,
@@ -57,9 +110,12 @@ export class ProductsController {
         status: HttpStatus.FORBIDDEN,
         description: PRODUCTS_API_RESPONSES.FORBIDDEN_ADMIN_REQUIRED,
     })
-    async create(@Body() createProductDto: CreateProductDto) {
+    async create(
+        @Body() createProductDto: CreateProductDto,
+        @UploadedFiles() images?: Express.Multer.File[]
+    ) {
         this.logger.log(PRODUCTS_LOG_MESSAGES.CREATING_PRODUCT(createProductDto.name));
-        return await this.productsService.create(createProductDto);
+        return await this.productsService.create(createProductDto, images);
     }
 
     @Get()
@@ -122,8 +178,40 @@ export class ProductsController {
     @Patch(':id')
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(UserRole.ADMIN)
+    @UseInterceptors(
+        FilesInterceptor('images', 10, {
+            limits: {
+                fileSize: 10 * 1024 * 1024, // 10MB per file
+            },
+        })
+    )
     @ApiBearerAuth()
+    @ApiConsumes('multipart/form-data')
     @ApiOperation({ summary: PRODUCTS_OPERATIONS.UPDATE_PRODUCT })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', example: 'Nike Air Max' },
+                description: { type: 'string', example: 'Comfortable running shoes' },
+                variants: {
+                    type: 'string',
+                    example: JSON.stringify([{ size: 'M', price: 99.99, stock: 50 }]),
+                },
+                categories: {
+                    type: 'string',
+                    example: JSON.stringify(['507f1f77bcf86cd799439011']),
+                },
+                images: {
+                    type: 'array',
+                    items: { type: 'string', format: 'binary' },
+                    description: 'Product images (max 10)',
+                },
+                isActive: { type: 'string', example: 'true' },
+                isFeatured: { type: 'string', example: 'false' },
+            },
+        },
+    })
     @ApiResponse({
         status: HttpStatus.OK,
         description: PRODUCTS_API_RESPONSES.PRODUCT_UPDATED,
@@ -144,9 +232,13 @@ export class ProductsController {
         status: HttpStatus.FORBIDDEN,
         description: PRODUCTS_API_RESPONSES.FORBIDDEN_ADMIN_REQUIRED,
     })
-    async update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
+    async update(
+        @Param('id') id: string,
+        @Body() updateProductDto: UpdateProductDto,
+        @UploadedFiles() images?: Express.Multer.File[]
+    ) {
         this.logger.log(PRODUCTS_LOG_MESSAGES.UPDATING_PRODUCT(id));
-        return await this.productsService.update(id, updateProductDto);
+        return await this.productsService.update(id, updateProductDto, images);
     }
 
     @Delete(':id')

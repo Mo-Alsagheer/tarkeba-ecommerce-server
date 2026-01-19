@@ -18,12 +18,13 @@ import { SanitizeMiddleware } from './common/middleware/sanitize.middleware';
 // Import all configuration modules
 import appConfig from './config/app/configuration';
 import databaseConfig from './config/database/configuration';
+import storageConfig from './config/storage.config';
 
 @Module({
     imports: [
         ConfigModule.forRoot({
             isGlobal: true,
-            load: [appConfig, databaseConfig],
+            load: [appConfig, databaseConfig, storageConfig],
         }),
         // Rate limiting to prevent DoS attacks
         ThrottlerModule.forRoot([

@@ -2,23 +2,22 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { AxiosResponse } from 'axios';
-import { PaymentMethod } from '../entities/payment.entity';
+import { AxiosResponse, AxiosError } from 'axios';
 import crypto from 'crypto';
 
 export interface PaymobConfig {
     apiKey: string;
     baseUrl: string;
-    integrationIds: {
-        visa: number;
-        mastercard: number;
-        vodafoneCash: number;
-        orangeCash: number;
-        etisalatCash: number;
-        wePay: number;
-    };
-    iframeId: number;
+    walletIntegrationId: number;
     hmacSecret: string;
+}
+
+export interface PaymobWalletPayRequest {
+    source: {
+        identifier: string;
+        subtype: 'WALLET';
+    };
+    payment_token: string;
 }
 
 export interface PaymobOrderRequest {
@@ -114,27 +113,15 @@ export class PaymobService {
             baseUrl:
                 this.configService.get<string>('PAYMOB_BASE_URL') ||
                 'https://accept.paymob.com/api',
-            integrationIds: {
-                visa: parseInt(this.configService.get<string>('PAYMOB_VISA_INTEGRATION_ID') || '0'),
-                mastercard: parseInt(
-                    this.configService.get<string>('PAYMOB_MASTERCARD_INTEGRATION_ID') || '0'
-                ),
-                vodafoneCash: parseInt(
-                    this.configService.get<string>('PAYMOB_VODAFONE_CASH_INTEGRATION_ID') || '0'
-                ),
-                orangeCash: parseInt(
-                    this.configService.get<string>('PAYMOB_ORANGE_CASH_INTEGRATION_ID') || '0'
-                ),
-                etisalatCash: parseInt(
-                    this.configService.get<string>('PAYMOB_ETISALAT_CASH_INTEGRATION_ID') || '0'
-                ),
-                wePay: parseInt(
-                    this.configService.get<string>('PAYMOB_WE_PAY_INTEGRATION_ID') || '0'
-                ),
-            },
-            iframeId: parseInt(this.configService.get<string>('PAYMOB_IFRAME_ID') || '0'),
+            walletIntegrationId: parseInt(
+                this.configService.get<string>('PAYMOB_WALLET_INTEGRATION_ID') || '0'
+            ),
             hmacSecret: this.configService.get<string>('PAYMOB_HMAC_SECRET') || '',
         };
+
+        if (!this.config.walletIntegrationId || this.config.walletIntegrationId === 0) {
+            this.logger.warn('PAYMOB_WALLET_INTEGRATION_ID is not configured.');
+        }
     }
 
     private async getAuthToken(): Promise<string> {
@@ -161,27 +148,6 @@ export class PaymobService {
         }
     }
 
-    private getIntegrationId(paymentMethod: PaymentMethod): number {
-        const integrationMap = {
-            [PaymentMethod.VISA]: this.config.integrationIds.visa,
-            [PaymentMethod.MASTERCARD]: this.config.integrationIds.mastercard,
-            [PaymentMethod.VODAFONE_CASH]: this.config.integrationIds.vodafoneCash,
-            [PaymentMethod.ORANGE_CASH]: this.config.integrationIds.orangeCash,
-            [PaymentMethod.ETISALAT_CASH]: this.config.integrationIds.etisalatCash,
-            [PaymentMethod.WE_PAY]: this.config.integrationIds.wePay,
-            [PaymentMethod.BANK_TRANSFER]: this.config.integrationIds.visa, // Default to visa integration
-        };
-
-        const integrationId = integrationMap[paymentMethod];
-        if (!integrationId) {
-            throw new BadRequestException(
-                `Integration ID not configured for payment method: ${paymentMethod}`
-            );
-        }
-
-        return integrationId;
-    }
-
     async createOrder(orderData: PaymobOrderRequest): Promise<PaymobOrderResponse> {
         const token = await this.getAuthToken();
 
@@ -198,9 +164,17 @@ export class PaymobService {
             );
 
             return response.data;
-        } catch (error: unknown) {
-            this.logger.error('Failed to create Paymob order', error);
-            throw new BadRequestException('Failed to create payment order');
+        } catch (error: any) {
+            this.logger.error('Failed to create Paymob order', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+            });
+            const errorMessage =
+                error.response?.data?.detail ||
+                error.response?.data?.message ||
+                'Failed to create payment order';
+            throw new BadRequestException(`Payment order creation failed: ${errorMessage}`);
         }
     }
 
@@ -208,6 +182,18 @@ export class PaymobService {
         const token = await this.getAuthToken();
 
         try {
+            this.logger.debug('Creating payment key with data:', {
+                amount_cents: paymentKeyData.amount_cents,
+                currency: paymentKeyData.currency,
+                order_id: paymentKeyData.order_id,
+                integration_id: paymentKeyData.integration_id,
+                billing_data: {
+                    ...paymentKeyData.billing_data,
+                    email: paymentKeyData.billing_data.email ? '***' : undefined,
+                    phone_number: paymentKeyData.billing_data.phone_number ? '***' : undefined,
+                },
+            });
+
             const response: AxiosResponse<PaymobPaymentKeyResponse> = await firstValueFrom(
                 this.httpService.post<PaymobPaymentKeyResponse>(
                     `${this.config.baseUrl}/acceptance/payment_keys`,
@@ -219,35 +205,115 @@ export class PaymobService {
             );
 
             return response.data.token;
-        } catch (error: unknown) {
-            this.logger.error('Failed to create Paymob payment key', error);
-            throw new BadRequestException('Failed to create payment key');
+        } catch (error: any) {
+            this.logger.error('Failed to create Paymob payment key', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+                requestData: {
+                    amount_cents: paymentKeyData.amount_cents,
+                    currency: paymentKeyData.currency,
+                    order_id: paymentKeyData.order_id,
+                    integration_id: paymentKeyData.integration_id,
+                },
+            });
+
+            // Extract more detailed error information
+            let errorMessage = 'Failed to create payment key';
+            if (error.response?.data) {
+                const responseData = error.response.data;
+                if (typeof responseData === 'string') {
+                    errorMessage = responseData;
+                } else if (responseData.detail) {
+                    errorMessage = responseData.detail;
+                } else if (responseData.message) {
+                    errorMessage = responseData.message;
+                } else if (responseData.error) {
+                    errorMessage = responseData.error;
+                } else {
+                    errorMessage = JSON.stringify(responseData);
+                }
+            }
+
+            throw new BadRequestException(`Payment key creation failed: ${errorMessage}`);
         }
     }
 
-    async initiatePayment(
+    async payWithWallet(paymentToken: string, walletNumber: string): Promise<string> {
+        try {
+            const response = await firstValueFrom(
+                this.httpService.post(`${this.config.baseUrl}/acceptance/payments/pay`, {
+                    source: {
+                        identifier: walletNumber,
+                        subtype: 'WALLET',
+                    },
+                    payment_token: paymentToken,
+                })
+            );
+
+            const redirectUrl = response.data?.redirect_url;
+            if (!redirectUrl) {
+                this.logger.error('Wallet payment response missing redirect_url', {
+                    response: response.data,
+                });
+                throw new BadRequestException(
+                    'Wallet payment failed: missing redirect URL from Paymob. Check integration ID and wallet number format (e.g., 01XXXXXXXXX)'
+                );
+            }
+
+            return redirectUrl;
+        } catch (error: any) {
+            this.logger.error('Failed to execute wallet payment request', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+            });
+            const errorMessage =
+                error.response?.data?.detail ||
+                error.response?.data?.message ||
+                error.response?.data?.error ||
+                'Failed to execute wallet payment';
+            throw new BadRequestException(`Wallet payment failed: ${errorMessage}`);
+        }
+    }
+
+    async initiateWalletPayment(
         amount: number,
         currency: string,
-        paymentMethod: PaymentMethod,
         orderId: string,
         userEmail: string,
-        userPhone: string,
         userName: string,
-        walletMsisdn?: string
+        walletMsisdn: string
     ): Promise<{
         paymobOrderId: string;
         paymentKey: string;
-        iframeUrl?: string;
-        redirectUrl?: string;
+        redirectUrl: string;
     }> {
+        // Validate wallet phone number
+        if (!walletMsisdn || walletMsisdn.length < 10) {
+            throw new BadRequestException(
+                'Valid wallet phone number is required (e.g., 01XXXXXXXXX)'
+            );
+        }
+
+        // Validate wallet integration ID
+        if (!this.config.walletIntegrationId || this.config.walletIntegrationId === 0) {
+            throw new BadRequestException(
+                'Wallet integration not configured. Please set PAYMOB_WALLET_INTEGRATION_ID in your .env file'
+            );
+        }
+
         // Convert amount to cents (Paymob expects amounts in cents)
         const amountCents = Math.round(amount * 100);
+
+        // Create unique merchant order ID to avoid duplicates
+        const uniqueMerchantOrderId = `${orderId}_${Date.now()}`;
 
         // Create Paymob order
         const orderData: PaymobOrderRequest = {
             amount_cents: amountCents,
             currency,
-            merchant_order_id: orderId,
+            merchant_order_id: uniqueMerchantOrderId,
             items: [
                 {
                     name: `Order ${orderId}`,
@@ -260,8 +326,10 @@ export class PaymobService {
 
         const paymobOrder = await this.createOrder(orderData);
 
-        // Get integration ID for payment method
-        const integrationId = this.getIntegrationId(paymentMethod);
+        // Parse user name
+        const nameParts = userName.trim().split(' ');
+        const firstName = nameParts[0] || 'Customer';
+        const lastName = nameParts.slice(1).join(' ') || 'User';
 
         // Create payment key
         const paymentKeyData: PaymobPaymentKeyRequest = {
@@ -269,50 +337,32 @@ export class PaymobService {
             expiration: 3600, // 1 hour expiration
             order_id: paymobOrder.id.toString(),
             billing_data: {
-                email: userEmail,
-                first_name: userName.split(' ')[0] || 'Customer',
-                last_name: userName.split(' ').slice(1).join(' ') || 'User',
-                phone_number: walletMsisdn || userPhone,
+                email: userEmail.trim() || 'customer@example.com',
+                first_name: firstName,
+                last_name: lastName,
+                phone_number: walletMsisdn,
                 country: 'EG',
                 city: 'Cairo',
+                street: 'NA',
+                building: 'NA',
+                floor: 'NA',
+                apartment: 'NA',
             },
             currency,
-            integration_id: integrationId,
+            integration_id: this.config.walletIntegrationId,
             lock_order_when_paid: true,
         };
 
         const paymentKey = await this.createPaymentKey(paymentKeyData);
 
-        const result = {
+        // Call pay API to get redirect URL for wallet OTP
+        const redirectUrl = await this.payWithWallet(paymentKey, walletMsisdn);
+
+        return {
             paymobOrderId: paymobOrder.id.toString(),
             paymentKey,
-            iframeUrl: undefined as string | undefined,
-            redirectUrl: undefined as string | undefined,
+            redirectUrl,
         };
-
-        // Generate appropriate URLs based on payment method
-        if (this.isCardPayment(paymentMethod)) {
-            result.iframeUrl = `https://accept.paymob.com/api/acceptance/iframes/${this.config.iframeId}?payment_token=${paymentKey}`;
-        } else if (this.isWalletPayment(paymentMethod)) {
-            result.redirectUrl = `https://accept.paymob.com/api/acceptance/payments/pay?payment_token=${paymentKey}`;
-        } else if (paymentMethod === PaymentMethod.BANK_TRANSFER) {
-            result.redirectUrl = `https://accept.paymob.com/api/acceptance/payments/pay?payment_token=${paymentKey}`;
-        }
-
-        return result;
-    }
-
-    private isCardPayment(paymentMethod: PaymentMethod): boolean {
-        return [PaymentMethod.VISA, PaymentMethod.MASTERCARD].includes(paymentMethod);
-    }
-
-    private isWalletPayment(paymentMethod: PaymentMethod): boolean {
-        return [
-            PaymentMethod.VODAFONE_CASH,
-            PaymentMethod.ORANGE_CASH,
-            PaymentMethod.ETISALAT_CASH,
-            PaymentMethod.WE_PAY,
-        ].includes(paymentMethod);
     }
 
     verifyWebhookSignature(

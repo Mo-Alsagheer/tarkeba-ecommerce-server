@@ -12,14 +12,21 @@ import {
     StockValidationResponse,
 } from '../../../../common/types';
 import { PRODUCTS_ERROR_MESSAGES, PRODUCTS_LOG_MESSAGES } from '../../../../common/constants';
+import { FileUploadService } from '../../../common/file-upload/file-upload.service';
 
 @Injectable()
 export class ProductsService {
     private readonly logger = new Logger(ProductsService.name);
 
-    constructor(@InjectModel(Product.name) private productModel: Model<ProductDocument>) {}
+    constructor(
+        @InjectModel(Product.name) private productModel: Model<ProductDocument>,
+        private fileUploadService: FileUploadService
+    ) {}
 
-    async create(createProductDto: CreateProductDto): Promise<ProductDocument> {
+    async create(
+        createProductDto: CreateProductDto,
+        images?: Express.Multer.File[]
+    ): Promise<ProductDocument> {
         try {
             const existingSlug = await this.productModel.findOne({
                 slug: createProductDto.slug,
@@ -30,8 +37,34 @@ export class ProductsService {
                 throw new BadRequestException(PRODUCTS_ERROR_MESSAGES.SLUG_ALREADY_EXISTS);
             }
 
+            // Upload images if provided
+            let imageUrls: string[] = [];
+            if (images && images.length > 0) {
+                try {
+                    const uploadResults = await this.fileUploadService.uploadMultiple(images, {
+                        folder: 'products',
+                        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+                        maxFileSize: 10 * 1024 * 1024, // 10MB
+                    });
+                    imageUrls = uploadResults.map((result) => result.url);
+                    this.logger.log(
+                        `${imageUrls.length} images uploaded for product: ${createProductDto.name}`
+                    );
+                } catch (error) {
+                    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+                    this.logger.error(`Image upload failed: ${errorMsg}`);
+                    throw new BadRequestException(`Image upload failed: ${errorMsg}`);
+                }
+            }
+
+            // Create product with image URLs
+            const productData = {
+                ...createProductDto,
+                images: imageUrls,
+            };
+
             // Create new product
-            const product: ProductDocument = new this.productModel(createProductDto);
+            const product: ProductDocument = new this.productModel(productData);
             await product.save();
 
             this.logger.log(PRODUCTS_LOG_MESSAGES.PRODUCT_CREATED(String(product._id)));
@@ -65,7 +98,10 @@ export class ProductsService {
             match.$text = { $search: search };
         }
         if (category) {
-            match.categories = { $in: [new Types.ObjectId(category)] };
+            if (!Types.ObjectId.isValid(category)) {
+                throw new BadRequestException('Invalid category ID format');
+            }
+            match.categories = { $in: [new Types.ObjectId(category), category] };
         }
         if (isActive !== undefined) {
             match.isActive = isActive;
@@ -95,7 +131,8 @@ export class ProductsService {
                 { $match: match },
                 {
                     $addFields: {
-                        minPrice: { $min: '$variants.price' },
+                        price: { $min: '$variants.price' },
+                        comparePrice: { $min: '$variants.comparePrice' },
                         totalStock: { $sum: '$variants.stock' },
                     },
                 },
@@ -134,10 +171,11 @@ export class ProductsService {
                 },
             ]);
 
+            this.logger.debug(result);
             const data = result?.[0]?.data || [];
             const total = result?.[0]?.totalCount?.[0]?.count || 0;
             const totalPages = Math.ceil(total / limit);
-
+            this.logger.debug(data);
             return {
                 products: data,
                 total,
@@ -219,7 +257,11 @@ export class ProductsService {
         }
     }
 
-    async update(id: string, updateProductDto: UpdateProductDto): Promise<ProductDocument> {
+    async update(
+        id: string,
+        updateProductDto: UpdateProductDto,
+        images?: Express.Multer.File[]
+    ): Promise<ProductDocument> {
         if (!Types.ObjectId.isValid(id)) {
             throw new BadRequestException(PRODUCTS_ERROR_MESSAGES.INVALID_PRODUCT_ID);
         }
@@ -236,8 +278,51 @@ export class ProductsService {
                 }
             }
 
+            // Upload new images if provided
+            let imageUrls: string[] | undefined;
+            if (images && images.length > 0) {
+                try {
+                    const uploadResults = await this.fileUploadService.uploadMultiple(images, {
+                        folder: 'products',
+                        allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+                        maxFileSize: 10 * 1024 * 1024, // 10MB
+                    });
+                    imageUrls = uploadResults.map((result) => result.url);
+                    this.logger.log(`${imageUrls.length} images uploaded for product: ${id}`);
+
+                    // Delete old images if they exist
+                    const existingProduct = await this.productModel.findById(id);
+                    if (existingProduct?.images && existingProduct.images.length > 0) {
+                        for (const imageUrl of existingProduct.images) {
+                            try {
+                                const urlParts = imageUrl.split('/');
+                                const publicIdWithExt = urlParts[urlParts.length - 1];
+                                const publicId = `products/${publicIdWithExt.split('.')[0]}`;
+                                await this.fileUploadService.deleteFile(publicId);
+                            } catch (deleteError) {
+                                const deleteErrorMsg =
+                                    deleteError instanceof Error
+                                        ? deleteError.message
+                                        : 'Unknown error';
+                                this.logger.warn(`Failed to delete old image: ${deleteErrorMsg}`);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+                    this.logger.error(`Image upload failed: ${errorMsg}`);
+                    throw new BadRequestException(`Image upload failed: ${errorMsg}`);
+                }
+            }
+
+            // Update product with new image URLs if provided
+            const updateData = {
+                ...updateProductDto,
+                ...(imageUrls && { images: imageUrls }),
+            };
+
             const product = await this.productModel
-                .findByIdAndUpdate(id, updateProductDto, { new: true })
+                .findByIdAndUpdate(id, updateData, { new: true })
                 .populate('categories', 'name slug')
                 .exec();
 

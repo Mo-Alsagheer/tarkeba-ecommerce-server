@@ -1,10 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, FilterQuery, SortOrder as MongooseSortOrder } from 'mongoose';
-import { Payment, PaymentDocument, PaymentStatus } from './entities/payment.entity';
-import type { PaymentMethod } from './entities/payment.entity';
+import {
+    Payment,
+    PaymentDocument,
+    PaymentStatus,
+    PaymentMethod,
+    PaymentProvider,
+} from './entities/payment.entity';
 import { PaymobService } from './services/paymob.service';
 import { OrdersService } from '../orders/orders.service';
+import { ProductsService } from '../../catalog/products/products.service';
 import { PaymentStatus as OrderPaymentStatus } from '../orders/entities/order.entity';
 import { CreatePaymentDto, PaymentResponse } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
@@ -18,14 +24,15 @@ export class PaymentsService {
     constructor(
         @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
         private readonly paymobService: PaymobService,
-        private readonly ordersService: OrdersService
+        private readonly ordersService: OrdersService,
+        private readonly productsService: ProductsService
     ) {}
 
     async create(createPaymentDto: CreatePaymentDto, userId: string): Promise<PaymentResponse> {
-        // Validate order exists and belongs to user
+        // Validate order exists
         const order = await this.ordersService.findOne(createPaymentDto.orderID);
-        if (!order || order.userID.toString() !== userId) {
-            throw new NotFoundException('Order not found or not owned by user');
+        if (!order) {
+            throw new NotFoundException('Order not found');
         }
 
         // Check if payment already exists for this order
@@ -40,57 +47,98 @@ export class PaymentsService {
             throw new BadRequestException('Payment already exists for this order');
         }
 
-        // Create payment record
-        const payment = new this.paymentModel({
-            orderId: new Types.ObjectId(createPaymentDto.orderID),
-            userId: new Types.ObjectId(userId),
-            amount: createPaymentDto.amount,
-            currency: createPaymentDto.currency || 'EGP',
-            paymentMethod: createPaymentDto.paymentMethod,
-            status: PaymentStatus.PENDING,
-            metadata: createPaymentDto.metadata,
-            walletMsisdn: createPaymentDto.walletMsisdn,
-        });
+        // Handle CASH ON DELIVERY
+        if (createPaymentDto.paymentMethod === PaymentMethod.CASH_ON_DELIVERY) {
+            const payment = new this.paymentModel({
+                orderId: new Types.ObjectId(createPaymentDto.orderID),
+                userId: new Types.ObjectId(userId),
+                amount: createPaymentDto.amount,
+                currency: createPaymentDto.currency || 'EGP',
+                paymentMethod: PaymentMethod.CASH_ON_DELIVERY,
+                provider: PaymentProvider.INTERNAL,
+                status: PaymentStatus.PENDING,
+                metadata: createPaymentDto.metadata,
+            });
 
-        const savedPayment = await payment.save();
+            const savedPayment = await payment.save();
 
-        // Initiate payment with Paymob
-        try {
-            const paymobResult = await this.paymobService.initiatePayment(
-                createPaymentDto.amount,
-                createPaymentDto.currency || 'EGP',
-                createPaymentDto.paymentMethod,
-                createPaymentDto.orderID,
-                order.shippingAddress.phone || '+201234567890',
-                order.shippingAddress.customerName || 'Customer',
-                createPaymentDto.walletMsisdn || ''
-            );
-
-            // Update payment with Paymob details
-            savedPayment.paymobOrderId = paymobResult.paymobOrderId;
-            savedPayment.paymobPaymentKey = paymobResult.paymentKey;
-            savedPayment.paymobIframeUrl = paymobResult.iframeUrl || '';
-            savedPayment.status = PaymentStatus.PROCESSING;
-
-            await savedPayment.save();
+            this.logger.log('Cash on delivery payment created', {
+                paymentId: savedPayment._id,
+                orderId: createPaymentDto.orderID,
+            });
 
             return {
                 paymentId: savedPayment._id as string,
-                paymobOrderId: paymobResult.paymobOrderId,
-                paymentKey: paymobResult.paymentKey,
-                iframeUrl: paymobResult.iframeUrl,
-                redirectUrl: paymobResult.redirectUrl,
-                expiresAt: new Date(Date.now() + 3600000), // 1 hour from now
+                paymentMethod: PaymentMethod.CASH_ON_DELIVERY,
+                status: PaymentStatus.PENDING,
+                message: 'Cash on delivery confirmed. Payment will be collected upon delivery.',
             };
-        } catch (error: unknown) {
-            // Update payment status to failed
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            savedPayment.status = PaymentStatus.FAILED;
-            savedPayment.errorMessage = errorMessage;
-            await savedPayment.save();
-
-            throw error;
         }
+
+        // Handle WALLET payment
+        if (createPaymentDto.paymentMethod === PaymentMethod.WALLET) {
+            if (!createPaymentDto.walletMsisdn) {
+                throw new BadRequestException(
+                    'Wallet phone number (walletMsisdn) is required for wallet payments'
+                );
+            }
+
+            const payment = new this.paymentModel({
+                orderId: new Types.ObjectId(createPaymentDto.orderID),
+                userId: new Types.ObjectId(userId),
+                amount: createPaymentDto.amount,
+                currency: createPaymentDto.currency || 'EGP',
+                paymentMethod: PaymentMethod.WALLET,
+                provider: PaymentProvider.PAYMOB,
+                status: PaymentStatus.PENDING,
+                walletMsisdn: createPaymentDto.walletMsisdn,
+                metadata: createPaymentDto.metadata,
+            });
+
+            const savedPayment = await payment.save();
+
+            try {
+                const userEmail = 'customer@example.com';
+                const userName = order.shippingAddress?.customerName || 'Customer User';
+
+                this.logger.log('Initiating wallet payment with Paymob', {
+                    orderId: createPaymentDto.orderID,
+                    amount: createPaymentDto.amount,
+                    walletMsisdn: createPaymentDto.walletMsisdn,
+                });
+
+                const paymobResult = await this.paymobService.initiateWalletPayment(
+                    createPaymentDto.amount,
+                    createPaymentDto.currency || 'EGP',
+                    createPaymentDto.orderID,
+                    userEmail,
+                    userName,
+                    createPaymentDto.walletMsisdn
+                );
+
+                // Update payment with Paymob details
+                savedPayment.paymobOrderId = paymobResult.paymobOrderId;
+                savedPayment.paymobPaymentKey = paymobResult.paymentKey;
+                savedPayment.status = PaymentStatus.PROCESSING;
+                await savedPayment.save();
+
+                return {
+                    paymentId: savedPayment._id as string,
+                    paymobOrderId: paymobResult.paymobOrderId,
+                    paymentKey: paymobResult.paymentKey,
+                    redirectUrl: paymobResult.redirectUrl,
+                    expiresAt: new Date(Date.now() + 3600000),
+                };
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                savedPayment.status = PaymentStatus.FAILED;
+                savedPayment.errorMessage = errorMessage;
+                await savedPayment.save();
+                throw error;
+            }
+        }
+
+        throw new BadRequestException('Invalid payment method. Use "wallet" or "cash_on_delivery"');
     }
 
     async findAll(queryDto: QueryPaymentsDto) {
@@ -194,6 +242,21 @@ export class PaymentsService {
         return payment.save();
     }
 
+    getPaymentMethods() {
+        return [
+            {
+                value: PaymentMethod.WALLET,
+                label: 'Wallet',
+                provider: PaymentProvider.PAYMOB,
+            },
+            {
+                value: PaymentMethod.CASH_ON_DELIVERY,
+                label: 'Cash on delivery',
+                provider: PaymentProvider.INTERNAL,
+            },
+        ];
+    }
+
     async handleWebhook(webhookData: PaymobWebhookDto): Promise<void> {
         this.logger.log(`Processing webhook for transaction ${webhookData.id}`);
 
@@ -262,6 +325,32 @@ export class PaymentsService {
             await this.ordersService.update(payment.orderId.toString(), {
                 paymentStatus: OrderPaymentStatus.PAID,
             });
+
+            // Reduce stock after successful payment for wallet payments
+            if (payment.paymentMethod === PaymentMethod.WALLET) {
+                try {
+                    const orderItems = await this.ordersService.getOrderItems(
+                        payment.orderId.toString()
+                    );
+                    
+                    const stockItems = orderItems.map((item) => ({
+                        productID: item.productID.toString(),
+                        quantity: item.quantity,
+                        size: item.size,
+                    }));
+
+                    await this.productsService.reduceStockForOrder(stockItems);
+                    this.logger.log(
+                        `Stock reduced for order ${payment.orderId.toString()} after successful wallet payment`
+                    );
+                } catch (error) {
+                    this.logger.error(
+                        `Failed to reduce stock for order ${payment.orderId.toString()}: ${error instanceof Error ? error.message : String(error)}`
+                    );
+                    // Note: Payment is still marked as completed, but stock reduction failed
+                    // This should be handled by manual intervention or retry mechanism
+                }
+            }
         }
 
         this.logger.log(

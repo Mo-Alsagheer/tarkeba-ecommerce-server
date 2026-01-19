@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsBoolean, IsNumber, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CATEGORIES_SWAGGER_EXAMPLES } from '../../../../../common/constants';
 
@@ -73,6 +73,11 @@ export class CreateCategoryDto {
         example: true,
     })
     @IsOptional()
+    @Transform(({ value }) => {
+        if (value === 'true') return true;
+        if (value === 'false') return false;
+        return Boolean(value);
+    })
     @IsBoolean()
     isActive?: boolean = true;
 
@@ -83,22 +88,29 @@ export class CreateCategoryDto {
         minimum: 0,
     })
     @IsOptional()
+    @Transform(({ value }) => {
+        if (typeof value === 'string') return parseInt(value, 10);
+        if (typeof value === 'number') return value;
+        return 0;
+    })
     @IsNumber()
     sortOrder?: number = 0;
-
-    @ApiPropertyOptional({
-        description: 'URL of the category image',
-        example: CATEGORIES_SWAGGER_EXAMPLES.CATEGORY_IMAGE_URL,
-    })
-    @IsOptional()
-    @IsString()
-    image?: string;
 
     @ApiPropertyOptional({
         description: 'SEO metadata for the category page',
         type: CategorySeoDto,
     })
     @IsOptional()
+    @Transform(({ value }) => {
+        if (typeof value === 'string') {
+            try {
+                return JSON.parse(value) as CategorySeoDto;
+            } catch {
+                return undefined;
+            }
+        }
+        return value as CategorySeoDto;
+    })
     @ValidateNested()
     @Type(() => CategorySeoDto)
     seo?: CategorySeoDto;
@@ -109,6 +121,17 @@ export class CreateCategoryDto {
         example: CATEGORIES_SWAGGER_EXAMPLES.TAGS,
     })
     @IsOptional()
+    @Transform(({ value }) => {
+        if (typeof value === 'string') {
+            try {
+                return JSON.parse(value) as string[];
+            } catch {
+                return [value];
+            }
+        }
+        if (Array.isArray(value)) return value as string[];
+        return [];
+    })
     @IsString({ each: true })
     tags?: string[];
 }

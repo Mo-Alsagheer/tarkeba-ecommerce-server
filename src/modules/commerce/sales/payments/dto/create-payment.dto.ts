@@ -1,6 +1,6 @@
-import { IsString, IsNumber, IsOptional, Min, IsObject, IsEnum, IsMongoId } from 'class-validator';
+import { IsString, IsNumber, IsOptional, Min, IsObject, IsEnum, IsMongoId, ValidateIf } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PaymentMethod } from '../entities/payment.entity';
+import { PaymentMethod, PaymentStatus } from '../entities/payment.entity';
 
 export class CreatePaymentDto {
     @IsString()
@@ -19,9 +19,9 @@ export class CreatePaymentDto {
     @IsEnum(PaymentMethod)
     paymentMethod: PaymentMethod;
 
-    @IsOptional()
+    @ValidateIf((o) => o.paymentMethod === PaymentMethod.WALLET)
     @IsString()
-    walletMsisdn?: string; // Required for e-wallets
+    walletMsisdn?: string; // Required for wallet payments
 
     @IsOptional()
     @IsObject()
@@ -30,9 +30,11 @@ export class CreatePaymentDto {
 
 export class PaymentResponse {
     paymentId: string;
-    paymobOrderId: string;
-    paymentKey: string;
-    iframeUrl?: string;
+    paymobOrderId?: string;
+    paymentKey?: string;
     redirectUrl?: string;
-    expiresAt: Date;
+    expiresAt?: Date;
+    paymentMethod?: PaymentMethod;
+    status?: PaymentStatus;
+    message?: string;
 }

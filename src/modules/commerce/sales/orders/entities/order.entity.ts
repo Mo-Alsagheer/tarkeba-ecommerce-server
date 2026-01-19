@@ -61,16 +61,14 @@ export class Order {
     shippingAddress: {
         customerName: string;
         addressLine1: string;
-        addressLine2?: string;
         city: string;
         state: string;
-        postalCode: string;
         phone?: string;
     };
 
     @Prop({ type: Object })
     paymentDetails?: {
-        method: string; // 'stripe', 'paypal', 'cash_on_delivery'
+        method: string;
         transactionId?: string;
         paymentIntentId?: string;
         last4?: string;

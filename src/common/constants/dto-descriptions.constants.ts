@@ -45,8 +45,7 @@ export const CART_ITEM_DTO_DESCRIPTIONS = {
 } as const;
 
 export const ADDRESS_DTO_DESCRIPTIONS = {
-    FIRST_NAME: 'First name of the recipient',
-    LAST_NAME: 'Last name of the recipient',
+    CUSTOMER_NAME: 'Name of the recipient',
     ADDRESS_LINE_1: 'Primary street address',
     ADDRESS_LINE_2: 'Apartment, suite, unit, building, floor, etc. (optional)',
     CITY: 'City or town',
@@ -89,8 +88,7 @@ export const CART_ITEM_DTO_EXAMPLES = {
 } as const;
 
 export const ADDRESS_DTO_EXAMPLES = {
-    FIRST_NAME: 'John',
-    LAST_NAME: 'Doe',
+    CUSTOMER_NAME: 'John Doe',
     ADDRESS_LINE_1: '123 Main Street',
     ADDRESS_LINE_2: 'Apt 4B',
     CITY: 'New York',

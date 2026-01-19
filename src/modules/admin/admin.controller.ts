@@ -1,4 +1,4 @@
-import { Controller, Get, Delete, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Delete, Param, Query, UseGuards, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../identity/auth/guards/jwt-auth.guard';
@@ -13,6 +13,7 @@ import { API_OPERATIONS, API_RESPONSE_MESSAGES, API_DESCRIPTIONS } from '../../c
 @Roles(UserRole.ADMIN)
 @ApiBearerAuth()
 export class AdminController {
+    private readonly logger = new Logger(AdminController.name);
     constructor(private readonly adminService: AdminService) {}
 
     @Get('dashboard')
@@ -25,6 +26,7 @@ export class AdminController {
         description: API_RESPONSE_MESSAGES.ADMIN.DASHBOARD_ANALYTICS_RETRIEVED,
     })
     async getDashboardAnalytics() {
+        this.logger.log(this.adminService.getDashboardAnalytics());
         return this.adminService.getDashboardAnalytics();
     }
 

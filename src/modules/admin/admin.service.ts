@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from '../identity/users/entities/user.entity';
 import { Order } from '../commerce/sales/orders/entities/order.entity';
+import { OrderItem } from '../commerce/sales/orders/entities/order-item.entity';
 import { Product } from '../commerce/catalog/products/entities/product.entity';
 import { RefreshToken } from '../identity/auth/entities/refresh-token.entity';
 import { OrderStatus } from '../../common/enums';
@@ -14,6 +15,7 @@ export class AdminService {
     constructor(
         @InjectModel(User.name) private userModel: Model<User>,
         @InjectModel(Order.name) private orderModel: Model<Order>,
+        @InjectModel(OrderItem.name) private orderItemModel: Model<OrderItem>,
         @InjectModel(Product.name) private productModel: Model<Product>,
         @InjectModel(RefreshToken.name) private refreshTokenModel: Model<RefreshToken>
     ) {}
@@ -80,7 +82,7 @@ export class AdminService {
             {
                 $group: {
                     _id: null,
-                    total: { $sum: '$totalPrice' },
+                    total: { $sum: '$totalAmount' },
                 },
             },
         ]);
@@ -94,23 +96,21 @@ export class AdminService {
             .find()
             .sort({ createdAt: -1 })
             .limit(limit)
-            .populate('userID', 'username email')
-            .populate('items.product', 'name slug');
+            .populate('userID', 'username email');
     }
 
     // Get top selling products
     async getTopProducts(limit: number = 10) {
-        return await this.orderModel.aggregate<{
+        return await this.orderItemModel.aggregate<{
             _id: string;
             totalQuantity: number;
             totalRevenue: number;
         }>([
-            { $unwind: '$items' },
             {
                 $group: {
-                    _id: '$items.product',
-                    totalQuantity: { $sum: '$items.quantity' },
-                    totalRevenue: { $sum: { $multiply: ['$items.quantity', '$items.price'] } },
+                    _id: '$productID',
+                    totalQuantity: { $sum: '$quantity' },
+                    totalRevenue: { $sum: '$totalPrice' },
                 },
             },
             { $sort: { totalQuantity: -1 } },
@@ -232,7 +232,7 @@ export class AdminService {
                     _id: {
                         $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
                     },
-                    totalSales: { $sum: '$totalPrice' },
+                    totalSales: { $sum: '$totalAmount' },
                     orderCount: { $sum: 1 },
                 },
             },

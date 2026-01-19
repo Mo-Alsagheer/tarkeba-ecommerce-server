@@ -8,10 +8,7 @@ export default registerAs('paymob', () => ({
     integrationIds: {
         visa: parseInt(process.env.PAYMOB_VISA_INTEGRATION_ID || '0'),
         mastercard: parseInt(process.env.PAYMOB_MASTERCARD_INTEGRATION_ID || '0'),
-        vodafoneCash: parseInt(process.env.PAYMOB_VODAFONE_CASH_INTEGRATION_ID || '0'),
-        orangeCash: parseInt(process.env.PAYMOB_ORANGE_CASH_INTEGRATION_ID || '0'),
-        etisalatCash: parseInt(process.env.PAYMOB_ETISALAT_CASH_INTEGRATION_ID || '0'),
-        wePay: parseInt(process.env.PAYMOB_WE_PAY_INTEGRATION_ID || '0'),
+        wallet: parseInt(process.env.PAYMOB_WALLET_INTEGRATION_ID || '0'),
     },
     iframeId: parseInt(process.env.PAYMOB_IFRAME_ID || '0'),
 }));

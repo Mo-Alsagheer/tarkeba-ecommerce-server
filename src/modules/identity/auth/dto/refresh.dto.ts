@@ -1,5 +1,5 @@
-import { IsNotEmpty } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
     API_DESCRIPTIONS,
     API_EXAMPLES,
@@ -7,10 +7,11 @@ import {
 } from '../../../../common/constants';
 
 export class RefreshDto {
-    @ApiProperty({
+    @ApiPropertyOptional({
         description: API_DESCRIPTIONS.AUTH.REFRESH_TOKEN,
         example: API_EXAMPLES.AUTH.REFRESH_TOKEN,
     })
+    @IsOptional()
     @IsNotEmpty({ message: AUTH_VALIDATION_MESSAGES.REFRESH_TOKEN_REQUIRED })
-    refreshToken: string;
+    refreshToken?: string;
 }
