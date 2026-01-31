@@ -16,6 +16,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
         // Check if required environment variables are set
         if (!secretOrKey || !issuer || !audience) {
+            console.error('[JwtStrategy] JWT Configuration Error:', {
+                ACCESS_JWT_SECRET: secretOrKey ? '****' + secretOrKey.substr(-4) : 'MISSING',
+                JWT_ISSUER: issuer || 'MISSING',
+                JWT_AUDIENCE: audience || 'MISSING',
+                ENV_ACCESS_JWT_SECRET: process.env.ACCESS_JWT_SECRET
+                    ? 'Present in process.env'
+                    : 'Missing in process.env',
+            });
             throw new Error(AUTH_ERROR_MESSAGES.JWT.CONFIG_MISSING);
         }
 
