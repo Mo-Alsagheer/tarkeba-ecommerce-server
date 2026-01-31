@@ -89,4 +89,25 @@ export class PaymentsController {
     handlePaymobWebhook(@Body() webhookData: PaymobWebhookDto) {
         return this.paymentsService.handleWebhook(webhookData);
     }
+
+    @Get('callback/paymob')
+    @HttpCode(HttpStatus.OK)
+    async handlePaymobCallback(@Query() callbackData: any) {
+        const result = await this.paymentsService.handleCallback(callbackData);
+        
+        // Redirect user to appropriate page based on payment status
+        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+        
+        if (result.success) {
+            return {
+                ...result,
+                redirectUrl: `${baseUrl}/orders/${result.orderId}/success`,
+            };
+        } else {
+            return {
+                ...result,
+                redirectUrl: `${baseUrl}/orders/${result.orderId}/failed`,
+            };
+        }
+    }
 }

@@ -143,7 +143,7 @@ export class OrdersService {
         }
     }
 
-    async findOne(id: string): Promise<Order> {
+    async findOne(id: string): Promise<{ order: Order; items: OrderItem[]; paymentMethod?: string }> {
         if (!Types.ObjectId.isValid(id)) {
             throw new BadRequestException(ORDERS_ERROR_MESSAGES.INVALID_ORDER_ID);
         }
@@ -158,7 +158,15 @@ export class OrdersService {
                 throw new NotFoundException(ORDERS_ERROR_MESSAGES.ORDER_NOT_FOUND);
             }
 
-            return order;
+            const orderItems = await this.orderItemModel
+                .find({ orderID: order._id })
+                .populate('productID', 'name slug images price')
+                .exec();
+
+            return {
+                order,
+                items: orderItems,
+            };
         } catch (error: unknown) {
             this.logger.error(ORDERS_LOG_MESSAGES.FAILED_TO_FETCH_ORDER(id));
             throw error;
@@ -391,7 +399,11 @@ export class OrdersService {
                 discountAmount,
                 totalAmount,
                 shippingAddress: checkoutDto.shippingAddress,
+                email: checkoutDto.email,
                 notes: checkoutDto.notes,
+                paymentDetails: {
+                    method: checkoutDto.paymentMethod,
+                },
             };
 
             const order = await this.create(orderData);
@@ -421,9 +433,7 @@ export class OrdersService {
                 // For COD, complete the order immediately
                 await this.productsService.reduceStockForOrder(stockItems);
 
-                this.logger.log(
-                    ORDERS_LOG_MESSAGES.CHECKOUT_COMPLETED(userID, order.orderNumber)
-                );
+                this.logger.log(ORDERS_LOG_MESSAGES.CHECKOUT_COMPLETED(userID, order.orderNumber));
 
                 return {
                     order,
@@ -442,8 +452,7 @@ export class OrdersService {
                     order,
                     paymentRequired: true,
                     paymentMethod: PaymentMethod.WALLET,
-                    message:
-                        'Order created. Please complete payment to confirm your order.',
+                    message: 'Order created. Please complete payment to confirm your order.',
                 };
             } else {
                 throw new BadRequestException('Invalid payment method');

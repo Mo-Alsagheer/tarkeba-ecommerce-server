@@ -97,6 +97,21 @@ export interface PaymobTransactionResponse {
     };
 }
 
+export interface PaymobCallbackData {
+    id: string;
+    pending: string;
+    amount_cents: string;
+    success: string;
+    is_auth: string;
+    is_capture: string;
+    is_refunded: string;
+    is_void: string;
+    order: string;
+    integration_id: string;
+    currency: string;
+    hmac: string;
+}
+
 @Injectable()
 export class PaymobService {
     private readonly logger = new Logger(PaymobService.name);
@@ -417,6 +432,29 @@ export class PaymobService {
             .digest('hex');
 
         return calculatedHmac === receivedHmac;
+    }
+
+    verifyCallbackSignature(callbackData: PaymobCallbackData): boolean {
+        const concatenatedString = [
+            callbackData.amount_cents,
+            callbackData.currency,
+            callbackData.id,
+            callbackData.integration_id,
+            callbackData.is_auth,
+            callbackData.is_capture,
+            callbackData.is_refunded,
+            callbackData.is_void,
+            callbackData.order,
+            callbackData.pending,
+            callbackData.success,
+        ].join('');
+
+        const calculatedHmac = crypto
+            .createHmac('sha512', this.config.hmacSecret)
+            .update(concatenatedString)
+            .digest('hex');
+
+        return calculatedHmac === callbackData.hmac;
     }
 
     async getTransactionDetails(transactionId: string): Promise<PaymobTransactionResponse> {

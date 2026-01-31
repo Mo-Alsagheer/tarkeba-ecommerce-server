@@ -95,7 +95,11 @@ export class ProductsService {
         // Build match filters compatible with variants-based pricing
         const match: FilterQuery<ProductDocument> = {};
         if (search) {
-            match.$text = { $search: search };
+            match.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } },
+                { tag: { $regex: search, $options: 'i' } },
+            ];
         }
         if (category) {
             if (!Types.ObjectId.isValid(category)) {
@@ -470,43 +474,41 @@ export class ProductsService {
             size?: string;
         }[]
     ): Promise<void> {
-        const session = await this.productModel.db.startSession();
-
         try {
-            await session.withTransaction(async () => {
-                for (const item of items) {
-                    if (!item.size) {
-                        throw new BadRequestException(
-                            `${PRODUCTS_ERROR_MESSAGES.SIZE_REQUIRED_FOR_REDUCTION} ${item.productID}`
-                        );
-                    }
-
-                    const result = await this.productModel.updateOne(
-                        {
-                            _id: item.productID,
-                            isActive: true,
-                            'variants.size': item.size,
-                            'variants.stock': { $gte: item.quantity }, // Final stock check on variant
-                        },
-                        { $inc: { 'variants.$.stock': -item.quantity } },
-                        { session }
+            for (const item of items) {
+                if (!item.size) {
+                    throw new BadRequestException(
+                        `${PRODUCTS_ERROR_MESSAGES.SIZE_REQUIRED_FOR_REDUCTION} ${item.productID}`
                     );
-
-                    if (result.matchedCount === 0) {
-                        throw new BadRequestException(
-                            `${PRODUCTS_ERROR_MESSAGES.INSUFFICIENT_STOCK} ${item.productID}`
-                        );
-                    }
                 }
-            });
+
+                const result = await this.productModel.updateOne(
+                    {
+                        _id: item.productID,
+                        isActive: true,
+                        'variants.size': item.size,
+                        'variants.stock': { $gte: item.quantity }, // Final stock check on variant
+                    },
+                    { 
+                        $inc: { 
+                            'variants.$.stock': -item.quantity,
+                            soldCount: item.quantity 
+                        } 
+                    }
+                );
+
+                if (result.matchedCount === 0) {
+                    throw new BadRequestException(
+                        `${PRODUCTS_ERROR_MESSAGES.INSUFFICIENT_STOCK} ${item.productID}`
+                    );
+                }
+            }
 
             this.logger.log(PRODUCTS_LOG_MESSAGES.STOCK_REDUCED(items.length));
         } catch (error: unknown) {
             const msg = error instanceof Error ? error.message : String(error);
             this.logger.error(`${PRODUCTS_ERROR_MESSAGES.FAILED_TO_REDUCE_STOCK}: ${msg}`);
             throw error;
-        } finally {
-            await session.endSession();
         }
     }
 

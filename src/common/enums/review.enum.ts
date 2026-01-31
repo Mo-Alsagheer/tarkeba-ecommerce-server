@@ -18,3 +18,9 @@ export enum ReviewType {
     ORDER = 'order',
     SELLER = 'seller',
 }
+
+export enum ReviewSortBy {
+    CREATED_AT = 'createdAt',
+    RATING = 'rating',
+    UPDATED_AT = 'updatedAt',
+}

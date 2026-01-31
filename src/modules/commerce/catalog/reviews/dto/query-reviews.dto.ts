@@ -3,7 +3,7 @@ import { IsOptional, IsEnum, IsString, IsNumber, Min, Max, IsMongoId } from 'cla
 import { Type } from 'class-transformer';
 import { ReviewStatus } from '../entities/review.entity';
 import { API_DESCRIPTIONS, API_EXAMPLES } from '../../../../../common/constants/api-descriptions';
-import { SortOrder } from '../../../../../common/enums';
+import { SortOrder, ReviewSortBy } from '../../../../../common/enums';
 
 export class QueryReviewsDto {
     @ApiProperty({
@@ -72,12 +72,12 @@ export class QueryReviewsDto {
 
     @ApiProperty({
         description: API_DESCRIPTIONS.REVIEW.SORT_BY,
-        enum: SortOrder,
+        enum: ReviewSortBy,
         required: false,
     })
     @IsOptional()
-    @IsEnum(SortOrder)
-    sortBy?: SortOrder;
+    @IsEnum(ReviewSortBy)
+    sortBy?: ReviewSortBy = ReviewSortBy.CREATED_AT;
 
     @ApiProperty({
         description: API_DESCRIPTIONS.REVIEW.SORT_ORDER,

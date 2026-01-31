@@ -49,6 +49,9 @@ export class Product {
     @Prop({ default: 0, min: 0 })
     reviewCount: number;
 
+    @Prop({ default: 0, min: 0 })
+    soldCount: number;
+
     @Prop({ type: Object })
     seo?: {
         title?: string;
@@ -63,7 +66,6 @@ export class Product {
 export const ProductSchema = SchemaFactory.createForClass(Product);
 
 // Create indexes
-ProductSchema.index({ slug: 1 });
 ProductSchema.index({ categories: 1 });
 ProductSchema.index({ isActive: 1 });
 ProductSchema.index({ isFeatured: 1 });

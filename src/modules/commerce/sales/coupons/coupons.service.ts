@@ -10,7 +10,7 @@ import { Coupon, CouponDocument, CouponType, CouponStatus } from './entities/cou
 import { CouponUsage, CouponUsageDocument } from './entities/coupon-usage.entity';
 import { CreateCouponDto } from './dto/create-coupon.dto';
 import { UpdateCouponDto } from './dto/update-coupon.dto';
-import { ApplyCouponDto, CouponApplicationResult, CartItemDto } from './dto/apply-coupon.dto';
+import { ValidateCouponDto, CouponApplicationResult, CartItemDto } from './dto/apply-coupon.dto';
 import { QueryCouponsDto } from './dto/query-coupons.dto';
 import {
     ICouponUsageStats,
@@ -167,7 +167,7 @@ export class CouponsService {
     }
 
     async applyCoupon(
-        applyCouponDto: ApplyCouponDto,
+        applyCouponDto: ValidateCouponDto,
         userID: string
     ): Promise<CouponApplicationResult> {
         const { code, cartItems } = applyCouponDto;

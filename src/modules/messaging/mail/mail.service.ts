@@ -41,20 +41,15 @@ export class MailService {
 
     private loadTemplates() {
         const templateDir = path.join(__dirname, 'templates');
-        console.log(`[MailService] Template directory: ${templateDir}`);
-        console.log(`[MailService] Directory exists: ${fs.existsSync(templateDir)}`);
-
         const templateFiles = ['welcome', 'verification', 'password-reset', 'order-status'];
 
         templateFiles.forEach((templateName) => {
             try {
                 const templatePath = path.join(templateDir, `${templateName}.hbs`);
-                console.log(`[MailService] Checking template path: ${templatePath}`);
                 if (fs.existsSync(templatePath)) {
                     const templateContent = fs.readFileSync(templatePath, 'utf-8');
                     const compiledTemplate = handlebars.compile(templateContent);
                     this.templates.set(templateName, compiledTemplate);
-                    console.log(`[MailService] Loaded template: ${templateName}`);
                 } else {
                     console.warn(`[MailService] Template file not found: ${templatePath}`);
                 }
@@ -63,7 +58,7 @@ export class MailService {
             }
         });
 
-        console.log(`[MailService] Total templates loaded: ${this.templates.size}`);
+        // console.log(`[MailService] Total templates loaded: ${this.templates.size}`);
     }
 
     private renderTemplate(templateName: string, context: any): string {

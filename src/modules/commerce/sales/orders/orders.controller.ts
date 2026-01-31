@@ -51,10 +51,10 @@ export class OrdersController {
         description: ORDERS_API_RESPONSES.UNAUTHORIZED,
     })
     async create(@Body() createOrderDto: CreateOrderDto, @Req() req: IAuthenticatedRequest) {
-        this.logger.log(`${ORDERS_CONTROLLER_LOG_MESSAGES.CREATING_ORDER}: ${req.user.userId}`);
+        this.logger.log(`${ORDERS_CONTROLLER_LOG_MESSAGES.CREATING_ORDER}: ${req.user.userID}`);
         return this.ordersService.create({
             ...createOrderDto,
-            userID: req.user.userId,
+            userID: req.user.userID,
         });
     }
 
@@ -71,8 +71,25 @@ export class OrdersController {
         description: ORDERS_API_RESPONSES.UNAUTHORIZED,
     })
     async findAll(@Req() req: IAuthenticatedRequest, @Query() query: QueryOrderDto) {
-        this.logger.log(`${ORDERS_CONTROLLER_LOG_MESSAGES.FETCHING_ORDERS}: ${req.user.userId}`);
-        return this.ordersService.findAll({ ...query, userID: req.user.userId });
+        this.logger.log(`${ORDERS_CONTROLLER_LOG_MESSAGES.FETCHING_ORDERS}: ${req.user.userID}`);
+        return this.ordersService.findAll({ ...query, userID: req.user.userID });
+    }
+
+    @Get('my')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Get current user orders with pagination' })
+    @ApiResponse({
+        status: HttpStatus.OK,
+        description: 'User orders retrieved successfully',
+    })
+    @ApiResponse({
+        status: HttpStatus.UNAUTHORIZED,
+        description: ORDERS_API_RESPONSES.UNAUTHORIZED,
+    })
+    async getMyOrders(@Req() req: IAuthenticatedRequest, @Query() query: QueryOrderDto) {
+        this.logger.log(`${ORDERS_CONTROLLER_LOG_MESSAGES.FETCHING_ORDERS}: ${req.user.userID}`);
+        return this.ordersService.findAll({ ...query, userID: req.user.userID });
     }
 
     @Get(':id')
@@ -93,7 +110,7 @@ export class OrdersController {
     })
     async findOne(@Param('id') id: string, @Req() req: IAuthenticatedRequest) {
         this.logger.log(
-            `${ORDERS_CONTROLLER_LOG_MESSAGES.FETCHING_ORDER_BY_ID}: ${id} (user: ${req.user.userId})`
+            `${ORDERS_CONTROLLER_LOG_MESSAGES.FETCHING_ORDER_BY_ID}: ${id} (user: ${req.user.userID})`
         );
         return this.ordersService.findOne(id);
     }
@@ -125,7 +142,7 @@ export class OrdersController {
         @Req() req: IAuthenticatedRequest
     ) {
         this.logger.log(
-            `${ORDERS_CONTROLLER_LOG_MESSAGES.UPDATING_ORDER}: ${id} (user: ${req.user.userId})`
+            `${ORDERS_CONTROLLER_LOG_MESSAGES.UPDATING_ORDER}: ${id} (user: ${req.user.userID})`
         );
         return this.ordersService.update(id, updateOrderDto);
     }
@@ -150,9 +167,9 @@ export class OrdersController {
     })
     async checkout(@Body() checkoutDto: CheckoutDto, @Req() req: IAuthenticatedRequest) {
         this.logger.log(
-            `${ORDERS_CONTROLLER_LOG_MESSAGES.PROCESSING_CHECKOUT}: ${req.user.userId}`
+            `${ORDERS_CONTROLLER_LOG_MESSAGES.PROCESSING_CHECKOUT}: ${req.user.userID}`
         );
-        const result = await this.ordersService.checkout(req.user.userId, checkoutDto);
+        const result = await this.ordersService.checkout(req.user.userID, checkoutDto);
 
         // Return structured response with payment instructions
         return {

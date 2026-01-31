@@ -1,4 +1,14 @@
-import { Controller, Get, Delete, Param, Query, UseGuards, Logger } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Delete,
+    Patch,
+    Param,
+    Query,
+    Body,
+    UseGuards,
+    Logger,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../identity/auth/guards/jwt-auth.guard';
@@ -6,6 +16,7 @@ import { RolesGuard } from '../identity/auth/guards/roles.guard';
 import { Roles } from '../identity/auth/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
 import { API_OPERATIONS, API_RESPONSE_MESSAGES, API_DESCRIPTIONS } from '../../common/constants';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 @ApiTags('admin')
 @Controller('admin')
@@ -33,8 +44,40 @@ export class AdminController {
     @Get('users')
     @ApiOperation({ summary: API_OPERATIONS.ADMIN.GET_ALL_USERS.SUMMARY })
     @ApiResponse({ status: 200, description: API_RESPONSE_MESSAGES.ADMIN.USERS_LIST_RETRIEVED })
-    async getAllUsers(@Query('page') page?: number, @Query('limit') limit?: number) {
-        return this.adminService.getAllUsers(page || 1, limit || 10);
+    async getAllUsers(
+        @Query('page') page?: number,
+        @Query('limit') limit?: number,
+        @Query('search') search?: string
+    ) {
+        return this.adminService.getAllUsers(page || 1, limit || 10, search);
+    }
+
+    @Get('orders')
+    @ApiOperation({ summary: 'Get all orders with pagination' })
+    @ApiResponse({ status: 200, description: 'Orders list retrieved successfully' })
+    async getAllOrders(@Query('page') page?: number, @Query('limit') limit?: number) {
+        return this.adminService.getAllOrders(page || 1, limit || 10);
+    }
+
+    @Get('orders/:id')
+    @ApiOperation({ summary: 'Get order details by ID' })
+    @ApiParam({ name: 'id', description: 'Order ID' })
+    @ApiResponse({ status: 200, description: 'Order details retrieved successfully' })
+    @ApiResponse({ status: 404, description: 'Order not found' })
+    async getOrderById(@Param('id') id: string) {
+        return this.adminService.getOrderById(id);
+    }
+
+    @Patch('orders/:id/status')
+    @ApiOperation({ summary: 'Update order status' })
+    @ApiParam({ name: 'id', description: 'Order ID' })
+    @ApiResponse({ status: 200, description: 'Order status updated successfully' })
+    @ApiResponse({ status: 404, description: 'Order not found' })
+    async updateOrderStatus(
+        @Param('id') id: string,
+        @Body() updateOrderStatusDto: UpdateOrderStatusDto
+    ) {
+        return this.adminService.updateOrderStatus(id, updateOrderStatusDto.status);
     }
 
     @Delete('users/:id')

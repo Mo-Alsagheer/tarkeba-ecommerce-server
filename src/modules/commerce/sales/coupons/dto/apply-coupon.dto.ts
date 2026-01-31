@@ -25,7 +25,7 @@ export class CartItemDto {
     categoryID: string;
 }
 
-export class ApplyCouponDto {
+export class ValidateCouponDto {
     @ApiProperty({
         description: API_DESCRIPTIONS.COUPON_APPLICATION.CODE,
         example: API_EXAMPLES.COUPON.CODE,

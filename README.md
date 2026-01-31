@@ -50,18 +50,18 @@ Tarkeba is a fully-featured e-commerce backend system designed. The platform use
 - Full CRUD operations for products
 - Product categories with hierarchical structure (parent-child relationships)
 - Advanced product search and filtering
-  - Filter by category with ObjectId support
-  - Search by name, description, and tags
-  - Price range filtering
-  - Active/featured product filtering
+    - Filter by category with ObjectId support
+    - Search by name, description, and tags
+    - Price range filtering
+    - Active/featured product filtering
 - **Variant-based Product System**:
-  - Multiple variants per product (size, price, stock)
-  - Compare price support for discounts
-  - Variant-specific stock tracking
+    - Multiple variants per product (size, price, stock)
+    - Compare price support for discounts
+    - Variant-specific stock tracking
 - Stock management and inventory tracking
-  - Automatic stock validation at checkout
-  - Atomic stock reduction with MongoDB transactions
-  - Low stock warnings
+    - Automatic stock validation at checkout
+    - Atomic stock reduction with MongoDB transactions
+    - Low stock warnings
 - Featured products highlighting
 - Product slug generation for SEO-friendly URLs
 - Product images support with Cloudinary integration
@@ -81,12 +81,12 @@ Tarkeba is a fully-featured e-commerce backend system designed. The platform use
 
 - Complete order lifecycle management
 - **Smart Checkout Process**:
-  - Cart validation with product and price verification
-  - Stock availability checking before order creation
-  - Payment method selection (COD or Wallet)
-  - Automatic order creation with items snapshot
-  - Conditional stock reduction based on payment method
-- Order status tracking (pending, processing, shipped, delivered, cancelled)
+    - Cart validation with product and price verification
+    - Stock availability checking before order creation
+    - Payment method selection (COD or Wallet)
+    - Automatic order creation with items snapshot
+    - Conditional stock reduction based on payment method
+- Order status tracking (pending, processing, shipped, delivered, cancelled, refunded)
 - Payment status tracking (pending, paid, failed, refunded)
 - Shipping address management
 - Order history for customers with pagination
@@ -99,12 +99,12 @@ Tarkeba is a fully-featured e-commerce backend system designed. The platform use
 
 - **Paymob Payment Gateway Integration**
 - **Multiple Payment Methods**:
-  - Mobile Wallet (Paymob integration)
-  - Cash on Delivery (COD)
+    - Mobile Wallet (Paymob integration)
+    - Cash on Delivery (COD)
 - **Payment Methods API**: Endpoint to retrieve available payment methods
 - **Smart Checkout Flow**:
-  - COD: Immediate order completion with stock reduction
-  - Wallet: Payment initiation with redirect URL, stock reduced after confirmation
+    - COD: Immediate order completion with stock reduction
+    - Wallet: Payment initiation with redirect URL, stock reduced after confirmation
 - Secure payment initiation and processing
 - Payment transaction tracking
 - Webhook handling for real-time payment status updates
@@ -117,8 +117,8 @@ Tarkeba is a fully-featured e-commerce backend system designed. The platform use
 
 - Flexible coupon creation and management
 - Multiple discount types:
-  - Percentage discounts
-  - Fixed amount discounts
+    - Percentage discounts
+    - Fixed amount discounts
 - Usage limits (per coupon and per user)
 - Expiration date support
 - Minimum purchase amount requirements
@@ -137,27 +137,30 @@ Tarkeba is a fully-featured e-commerce backend system designed. The platform use
 ### ⭐ Product Reviews
 
 - Customer product reviews and ratings (1-5 stars)
-- Review submission for purchased products only
-- Review moderation by admins
-- Helpful/not helpful voting system
-- Average rating aggregation
-- Review listing and filtering
+- Review submission for purchased products only (verified purchases)
+- Review moderation system with admin approval workflow
+- **Flexible sorting options**: Sort by createdAt, rating, or updatedAt
+- **Advanced filtering**: Filter by product, user, status, and rating
+- Average rating aggregation and statistics
+- Review listing with pagination
+- One review per product per user per order policy
 
 ### 📊 Admin Dashboard
 
 - **Comprehensive Analytics Dashboard**:
-  - Total sales revenue and order count
-  - User growth statistics
-  - Order status breakdown with visualizations
-  - Top selling products analysis
-  - Recent user registrations
-  - Daily/weekly/monthly sales trends
-  - Revenue analytics
-- **User Management**: View all users, delete users
+    - Total sales revenue and order count
+    - User growth statistics
+    - **Order status breakdown with zero-count statuses** (shows all status types even if count is 0)
+    - Top selling products analysis with variant breakdown
+    - Recent user registrations
+    - Daily/weekly/monthly sales trends
+    - Revenue analytics
+- **User Management**: View all users with pagination and search, delete users
+    - **Search functionality**: Search users by username, email, firstName, or lastName
 - **Product Management**: Full control over product catalog
 - **Order Management**: Track and update order statuses
 - **Coupon Management**: Create and manage discount coupons
-- **Review Moderation**: Approve or reject product reviews
+- **Review Moderation**: Approve or reject product reviews with flexible sorting options
 - **Return Management**: Process return requests
 
 ### 📧 Email System
@@ -166,25 +169,32 @@ Tarkeba is a fully-featured e-commerce backend system designed. The platform use
 - Email job queue with retry mechanism
 - Template-based emails using Handlebars
 - Email types:
-  - Welcome emails
-  - Email verification with OTP
-  - Password reset with OTP
-  - Order confirmation
-  - Order status updates
-  - Return request notifications
+    - Welcome emails
+    - Email verification with OTP
+    - Password reset with OTP
+    - Order confirmation
+    - Order status updates
+    - Return request notifications
 - Failed email retry logic
 - Email delivery tracking
 
 ### 🛡️ Global Infrastructure
 
 - **Exception Handling**: Global HTTP exception filter with standardized error responses
-- **Logging**: Request/response logging interceptor for debugging
-- **Validation**: Comprehensive DTO validation using class-validator
-- **Security Middleware**: Helmet for HTTP headers, CORS configuration
-- **Timeout Protection**: Request timeout interceptor
-- **Rate Limiting**: Protection against brute-force attacks
-- **API Documentation**: Auto-generated Swagger/OpenAPI documentation
-- **Type Safety**: Full TypeScript support with strict typing
+- **Logging**: Request/response logging interceptor for debugging and monitoring
+- **Validation**: Comprehensive DTO validation using class-validator with strict enum validation
+    - **Enum-based sorting and filtering** for type safety
+    - Unique DTO naming to prevent conflicts (ValidateCouponDto vs ApplyCouponDto)
+- **Security Middleware**:
+    - Helmet for HTTP headers security
+    - CORS configuration with specific origins
+    - HPP (HTTP Parameter Pollution) protection
+    - Input sanitization middleware
+- **Timeout Protection**: Request timeout interceptor to prevent hanging requests
+- **Rate Limiting**: Multi-tier throttling to protect against brute-force and DoS attacks
+- **API Documentation**: Auto-generated Swagger/OpenAPI documentation with detailed schemas
+- **Type Safety**: Full TypeScript support with strict typing and proper generics
+- **Path Resolution**: Modern path-to-regexp compatibility with named parameters
 
 ## Project Architecture
 
@@ -290,23 +300,27 @@ src/
 The application follows a clean layered architecture:
 
 **1. Presentation Layer (Controllers)**
+
 - Handle HTTP requests and responses
 - Input validation via DTOs
 - Route definitions with decorators
 - Swagger documentation
 
 **2. Application Layer (Services)**
+
 - Business logic implementation
 - Transaction orchestration
 - External service integration
 - Domain rules enforcement
 
 **3. Domain Layer (Entities/Schemas)**
+
 - Mongoose schemas and models
 - Domain entities and value objects
 - Database validation rules
 
 **4. Infrastructure Layer**
+
 - Database connections
 - Email queue system
 - External API clients (Paymob)
@@ -315,26 +329,31 @@ The application follows a clean layered architecture:
 ### Key Architectural Patterns
 
 **Aggregator Module Pattern**
+
 - Top-level modules (Identity, Commerce, Messaging) aggregate related sub-modules
 - Provides clear domain boundaries
 - Simplifies dependency management
 
 **Repository Pattern**
+
 - Mongoose models act as repositories
 - Data access abstraction
 - Centralized query logic
 
 **Service Layer Pattern**
+
 - Business logic isolated in services
 - Reusable across controllers
 - Easier to test and maintain
 
 **DTO Pattern**
+
 - Input validation with class-validator
 - Type safety with TypeScript
 - Automatic transformation with class-transformer
 
 **Dependency Injection**
+
 - NestJS built-in DI container
 - Loose coupling between components
 - Easy mocking for tests
@@ -353,9 +372,9 @@ The application follows a clean layered architecture:
 
 - **JWT**: @nestjs/jwt - JSON Web Token implementation
 - **Passport**: Passport.js - Authentication middleware
-  - passport-jwt - JWT strategy
-  - passport-local - Local username/password strategy
-  - passport-google-oauth20 - Google OAuth 2.0
+    - passport-jwt - JWT strategy
+    - passport-local - Local username/password strategy
+    - passport-google-oauth20 - Google OAuth 2.0
 - **Hashing**: bcryptjs - Password hashing
 - **Security**: Helmet - HTTP headers security
 - **CORS**: Built-in CORS support
@@ -433,14 +452,14 @@ AppModule (Root)
 
 ### Module Responsibilities
 
-| Module | Responsibility | Key Features |
-|--------|---------------|--------------|
+| Module              | Responsibility                            | Key Features                                |
+| ------------------- | ----------------------------------------- | ------------------------------------------- |
 | **MessagingModule** | Asynchronous communication infrastructure | Email queue, background jobs, notifications |
-| **IdentityModule** | User identity and access management | Authentication, authorization, profiles |
-| **CommerceModule** | Core e-commerce business logic | Products, orders, payments, returns |
-| **CatalogModule** | Product browsing and discovery | Products, categories, reviews |
-| **SalesModule** | Purchase and transaction flow | Cart, checkout, orders, payments |
-| **AdminModule** | Administrative operations | Analytics, user management, reports |
+| **IdentityModule**  | User identity and access management       | Authentication, authorization, profiles     |
+| **CommerceModule**  | Core e-commerce business logic            | Products, orders, payments, returns         |
+| **CatalogModule**   | Product browsing and discovery            | Products, categories, reviews               |
+| **SalesModule**     | Purchase and transaction flow             | Cart, checkout, orders, payments            |
+| **AdminModule**     | Administrative operations                 | Analytics, user management, reports         |
 
 ### Benefits of This Architecture
 
@@ -451,7 +470,7 @@ AppModule (Root)
 5. **Clean Dependencies**: Clear hierarchy prevents circular dependencies
 6. **Readable AppModule**: Only 5 top-level imports instead of 14+
 
-##  Installation
+## Installation
 
 ### Prerequisites
 
@@ -462,17 +481,20 @@ AppModule (Root)
 ### Steps
 
 1. **Clone the repository:**
+
 ```bash
 git clone <repository-url>
 cd tarkeba-ecommerce-project
 ```
 
 2. **Install dependencies:**
+
 ```bash
 npm install
 ```
 
 3. **Set up environment variables:**
+
 ```bash
 cp .env.example .env
 ```
@@ -482,17 +504,20 @@ cp .env.example .env
 ## Running the Application
 
 ### Development Mode
+
 ```bash
 npm run start:dev
 ```
 
 ### Production Mode
+
 ```bash
 npm run build
 npm run start:prod
 ```
 
 ### Debug Mode
+
 ```bash
 npm run start:debug
 ```
@@ -510,6 +535,7 @@ Once the application is running, access the interactive API documentation:
 ### Main API Endpoints
 
 #### Authentication
+
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
 - `POST /api/auth/refresh` - Refresh access token
@@ -521,11 +547,13 @@ Once the application is running, access the interactive API documentation:
 - `GET /api/auth/google` - Google OAuth
 
 #### Users
+
 - `GET /api/users/profile` - Get user profile
 - `PUT /api/users/profile` - Update user profile
 - `GET /api/users/orders` - Get order history
 
 #### Products
+
 - `GET /api/products` - Get all products (with filters)
 - `GET /api/products/:id` - Get product by ID
 - `GET /api/products/slug/:slug` - Get product by slug
@@ -535,6 +563,7 @@ Once the application is running, access the interactive API documentation:
 - `DELETE /api/products/:id` - Delete product (Admin)
 
 #### Categories
+
 - `GET /api/categories` - Get all categories
 - `GET /api/categories/tree` - Get category tree
 - `GET /api/categories/:id` - Get category by ID
@@ -543,17 +572,19 @@ Once the application is running, access the interactive API documentation:
 - `DELETE /api/categories/:id` - Delete category (Admin)
 
 #### Orders
+
 - `GET /api/orders` - Get user orders with filters
 - `GET /api/orders/:id` - Get order details
 - `GET /api/orders/:id/items` - Get order items
 - `POST /api/orders` - Create order
 - `POST /api/orders/checkout` - Checkout with payment method selection
-  - Returns order and payment instructions
-  - For wallet: includes nextStep with payment endpoint details
-  - For COD: immediate order completion
+    - Returns order and payment instructions
+    - For wallet: includes nextStep with payment endpoint details
+    - For COD: immediate order completion
 - `PUT /api/orders/:id` - Update order status (Admin)
 
 #### Coupons
+
 - `GET /api/coupons` - Get all coupons (Admin)
 - `POST /api/coupons` - Create coupon (Admin)
 - `POST /api/coupons/apply` - Apply coupon to cart
@@ -561,6 +592,7 @@ Once the application is running, access the interactive API documentation:
 - `DELETE /api/coupons/:id` - Delete coupon (Admin)
 
 #### Payments
+
 - `GET /api/payments/methods` - Get available payment methods
 - `POST /api/payments` - Create payment (initiates wallet payment or records COD)
 - `GET /api/payments` - Get all payments (Admin)
@@ -573,22 +605,28 @@ Once the application is running, access the interactive API documentation:
 - `POST /api/payments/webhook/paymob` - Paymob webhook handler
 
 #### Admin Dashboard
+
 - `GET /api/admin/dashboard` - Get dashboard analytics
-- `GET /api/admin/users` - Get all users
+- `GET /api/admin/users?page=1&limit=10&search=john` - Get all users with optional search
+    - Query params: `page`, `limit`, `search` (searches username, email, firstName, lastName)
 - `DELETE /api/admin/users/:id` - Delete user
 - `GET /api/admin/analytics/sales` - Get sales analytics
 - `GET /api/admin/analytics/top-products` - Get top products
 - `GET /api/admin/analytics/user-growth` - Get user growth
-- `GET /api/admin/analytics/order-status` - Get order status breakdown
+- `GET /api/admin/analytics/order-status` - Get order status breakdown (includes zero-count statuses)
 
 #### Reviews
-- `GET /api/reviews` - Get reviews
-- `POST /api/reviews` - Create review
+
+- `GET /api/reviews?sortBy=createdAt&sortOrder=desc&limit=10` - Get reviews with filtering
+    - Query params: `page`, `limit`, `productId`, `userId`, `status`, `rating`, `sortBy` (createdAt, rating, updatedAt), `sortOrder` (asc, desc)
+- `GET /api/reviews/product/:productId/stats` - Get product review statistics
+- `POST /api/reviews` - Create review (authenticated users only)
 - `PATCH /api/reviews/:id` - Update review
 - `DELETE /api/reviews/:id` - Delete review
 - `PATCH /api/reviews/:id/moderate` - Moderate review (Admin)
 
 #### Returns
+
 - `GET /api/returns` - Get returns
 - `POST /api/returns` - Create return request
 - `PATCH /api/returns/:id` - Update return status (Admin)
@@ -596,11 +634,13 @@ Once the application is running, access the interactive API documentation:
 ## Deployment
 
 ### Build for Production
+
 ```bash
 npm run build
 ```
 
 ### Environment Setup
+
 1. Set `NODE_ENV=production` in your environment
 2. Configure production database URL
 3. Set secure JWT secrets
@@ -608,6 +648,7 @@ npm run build
 5. Set up production OAuth credentials
 
 ### Docker Deployment (Optional)
+
 ```dockerfile
 FROM node:18-alpine
 WORKDIR /app
@@ -619,6 +660,7 @@ CMD ["node", "dist/main"]
 ```
 
 ### Recommended Services
+
 - **Database:** MongoDB Atlas
 - **Email:** SendGrid, AWS SES, or Gmail
 - **Hosting:** AWS, GCP, Azure, or Heroku
@@ -631,32 +673,36 @@ CMD ["node", "dist/main"]
 ### Payment Methods
 
 Retrieve available payment methods:
+
 ```bash
 GET /api/payments/methods
 ```
 
 Response:
+
 ```json
 [
-  {
-    "value": "wallet",
-    "label": "Wallet",
-    "provider": "paymob"
-  },
-  {
-    "value": "cash_on_delivery",
-    "label": "Cash on delivery",
-    "provider": "internal"
-  }
+    {
+        "value": "wallet",
+        "label": "Wallet",
+        "provider": "paymob"
+    },
+    {
+        "value": "cash_on_delivery",
+        "label": "Cash on delivery",
+        "provider": "internal"
+    }
 ]
 ```
 
 ### Cash on Delivery Flow
 
 1. **Checkout Request**:
+
 ```bash
 POST /api/orders/checkout
 ```
+
 ```json
 {
   "cartItems": [...],
@@ -666,6 +712,7 @@ POST /api/orders/checkout
 ```
 
 2. **Immediate Response**:
+
 ```json
 {
   "success": true,
@@ -677,6 +724,7 @@ POST /api/orders/checkout
 ```
 
 **What Happens:**
+
 - ✅ Order created
 - ✅ Stock reduced immediately
 - ✅ Order status: PENDING
@@ -686,9 +734,11 @@ POST /api/orders/checkout
 ### Wallet Payment Flow
 
 1. **Checkout Request**:
+
 ```bash
 POST /api/orders/checkout
 ```
+
 ```json
 {
   "cartItems": [...],
@@ -699,6 +749,7 @@ POST /api/orders/checkout
 ```
 
 2. **Response with Payment Instructions**:
+
 ```json
 {
   "success": true,
@@ -722,50 +773,57 @@ POST /api/orders/checkout
 ```
 
 **At this point:**
+
 - ✅ Order created
 - ⏳ Stock NOT reduced yet (reserved)
 - ✅ Order status: PENDING
 - ⏳ Payment status: PENDING
 
 3. **Initiate Payment**:
+
 ```bash
 POST /api/payments
 ```
+
 ```json
 {
-  "orderID": "...",
-  "amount": 299.99,
-  "currency": "EGP",
-  "paymentMethod": "wallet",
-  "walletMsisdn": "01234567890"
+    "orderID": "...",
+    "amount": 299.99,
+    "currency": "EGP",
+    "paymentMethod": "wallet",
+    "walletMsisdn": "01234567890"
 }
 ```
 
 4. **Payment Response**:
+
 ```json
 {
-  "paymentId": "...",
-  "paymobOrderId": "...",
-  "paymentKey": "...",
-  "redirectUrl": "https://accept.paymob.com/...",
-  "expiresAt": "2026-01-19T03:00:00.000Z"
+    "paymentId": "...",
+    "paymobOrderId": "...",
+    "paymentKey": "...",
+    "redirectUrl": "https://accept.paymob.com/...",
+    "expiresAt": "2026-01-19T03:00:00.000Z"
 }
 ```
 
 5. **Redirect User**: Frontend redirects user to `redirectUrl` to complete payment
 
 6. **Payment Webhook** (Paymob → Server):
+
 ```bash
 POST /api/payments/webhook/paymob
 ```
 
 **On Successful Payment:**
+
 - ✅ Payment status: COMPLETED
 - ✅ Stock reduced atomically
 - ✅ Order payment status: PAID
 - ✅ Email confirmation sent
 
 **On Failed Payment:**
+
 - ❌ Payment status: FAILED
 - ❌ Stock remains unreserved
 - ❌ Order payment status: FAILED
@@ -774,10 +832,12 @@ POST /api/payments/webhook/paymob
 ### Stock Management
 
 **Cash on Delivery:**
+
 - Stock is reduced immediately at checkout
 - Order is confirmed right away
 
 **Wallet Payment:**
+
 - Stock is validated but NOT reduced at checkout
 - Stock is reduced only after successful payment via webhook
 - Uses MongoDB transactions for atomic operations
@@ -786,29 +846,32 @@ POST /api/payments/webhook/paymob
 ### Error Handling
 
 **Stock Validation Errors:**
+
 ```json
 {
-  "statusCode": 400,
-  "message": "Insufficient stock for items: [...]",
-  "error": "Bad Request"
+    "statusCode": 400,
+    "message": "Insufficient stock for items: [...]",
+    "error": "Bad Request"
 }
 ```
 
 **Payment Errors:**
+
 ```json
 {
-  "statusCode": 400,
-  "message": "Payment already exists for this order",
-  "error": "Bad Request"
+    "statusCode": 400,
+    "message": "Payment already exists for this order",
+    "error": "Bad Request"
 }
 ```
 
 **Wallet Phone Required:**
+
 ```json
 {
-  "statusCode": 400,
-  "message": "Wallet phone number (walletMsisdn) is required for wallet payments",
-  "error": "Bad Request"
+    "statusCode": 400,
+    "message": "Wallet phone number (walletMsisdn) is required for wallet payments",
+    "error": "Bad Request"
 }
 ```
 
@@ -836,10 +899,10 @@ POST /api/payments/webhook/paymob
 
 ### Data Security
 
-- **OTP Security**: 
-  - 6-digit codes with 10-minute expiration
-  - Single-use only (marked as used after verification)
-  - Hashed before storage
+- **OTP Security**:
+    - 6-digit codes with 10-minute expiration
+    - Single-use only (marked as used after verification)
+    - Hashed before storage
 - **Email Queue**: Isolated email processing prevents blocking
 - **MongoDB Transactions**: ACID compliance for critical operations
 - **Mongoose Schema Validation**: Database-level validation
@@ -855,20 +918,22 @@ POST /api/payments/webhook/paymob
 
 - **Role-based Authorization**: Guards enforce access control
 - **Environment Variables**: Sensitive data never hardcoded
-- **Secure Cookie Settings**: 
-  - `httpOnly: true` - No JavaScript access
-  - `secure: true` - HTTPS only (production)
-  - `sameSite: 'strict'` - CSRF protection
+- **Secure Cookie Settings**:
+    - `httpOnly: true` - No JavaScript access
+    - `secure: true` - HTTPS only (production)
+    - `sameSite: 'strict'` - CSRF protection
 - **JWT Audience & Issuer Validation**: Prevents token misuse across services
 
 ## 📝 Code Quality
 
 ### Linting
+
 ```bash
 npm run lint
 ```
 
 ### Formatting
+
 ```bash
 npm run format
 ```

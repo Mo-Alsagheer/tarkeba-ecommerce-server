@@ -83,7 +83,7 @@ export interface IOAuthProfile {
 
 export interface IAuthenticatedUser {
     sub: string; // User ID (subject)
-    userId: string; // Alias for sub
+    userID: string; // Alias for sub
     email: string;
     role: UserRole;
 }

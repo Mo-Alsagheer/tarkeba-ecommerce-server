@@ -10,6 +10,7 @@ import {
     MaxLength,
     MinLength,
     IsEnum,
+    IsEmail,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -117,6 +118,14 @@ export class CheckoutDto {
     @IsNumber()
     @Min(0, { message: ORDER_VALIDATION_MESSAGES.AMOUNT_MIN })
     shippingAmount?: number;
+
+    @ApiProperty({
+        description: ORDER_DTO_DESCRIPTIONS.EMAIL,
+        example: ORDER_DTO_EXAMPLES.EMAIL,
+    })
+    @IsNotEmpty({ message: ORDER_VALIDATION_MESSAGES.EMAIL_REQUIRED })
+    @IsEmail({}, { message: ORDER_VALIDATION_MESSAGES.EMAIL_INVALID })
+    email: string;
 
     @ApiPropertyOptional({
         description: ORDER_DTO_DESCRIPTIONS.DISCOUNT_AMOUNT,

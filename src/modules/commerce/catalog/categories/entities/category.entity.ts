@@ -43,7 +43,6 @@ export class Category {
 export const CategorySchema = SchemaFactory.createForClass(Category);
 
 // Create indexes
-CategorySchema.index({ slug: 1 });
 CategorySchema.index({ parentId: 1 });
 CategorySchema.index({ isActive: 1 });
 CategorySchema.index({ name: 'text', description: 'text' });

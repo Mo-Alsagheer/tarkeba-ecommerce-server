@@ -9,6 +9,7 @@ import {
     MinLength,
     MaxLength,
     Matches,
+    IsEmail,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -157,6 +158,14 @@ export class CreateOrderDto {
     @ValidateNested()
     @Type(() => AddressDto)
     shippingAddress: AddressDto;
+
+    @ApiProperty({
+        description: ORDER_DTO_DESCRIPTIONS.EMAIL,
+        example: ORDER_DTO_EXAMPLES.EMAIL,
+    })
+    @IsString()
+    @IsEmail({}, { message: ORDER_VALIDATION_MESSAGES.EMAIL_INVALID })
+    email: string;
 
     @ApiPropertyOptional({
         description: ORDER_DTO_DESCRIPTIONS.PAYMENT_DETAILS,

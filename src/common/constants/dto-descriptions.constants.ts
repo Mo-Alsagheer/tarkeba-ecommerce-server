@@ -3,6 +3,7 @@
 export const ORDER_DTO_DESCRIPTIONS = {
     // CreateOrderDto
     USER_ID: 'The ID of the user placing the order',
+    EMAIL: 'Email address of the user placing the order',
     ORDER_STATUS: 'Current status of the order',
     PAYMENT_STATUS: 'Current payment status of the order',
     SUBTOTAL: 'Subtotal amount before taxes, shipping, and discounts',
@@ -77,6 +78,7 @@ export const ORDER_DTO_EXAMPLES = {
     SEARCH: 'ORD-2024-001',
     PAGE: 1,
     LIMIT: 10,
+    EMAIL: 'customer@example.com',
 } as const;
 
 export const CART_ITEM_DTO_EXAMPLES = {
@@ -138,7 +140,9 @@ export const ORDER_VALIDATION_MESSAGES = {
     POSTAL_CODE_STRING: 'Postal code must be a string',
     COUNTRY_STRING: 'Country must be a string',
     PHONE_STRING: 'Phone number must be a string',
-
+    EMAIL_STRING: 'Email must be a valid email address',
+    EMAIL_REQUIRED: 'Email is required',
+    EMAIL_INVALID: 'Email format is invalid',
     // Range validation messages
     QUANTITY_MIN: 'Quantity must be at least 1',
     UNIT_PRICE_MIN: 'Unit price cannot be negative',

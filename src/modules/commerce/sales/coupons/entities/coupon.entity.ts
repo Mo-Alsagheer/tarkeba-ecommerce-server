@@ -79,7 +79,6 @@ export class Coupon {
 export const CouponSchema = SchemaFactory.createForClass(Coupon);
 
 // Indexes for performance
-CouponSchema.index({ code: 1 });
 CouponSchema.index({ status: 1, startDate: 1, expiryDate: 1 });
 CouponSchema.index({ applicableProducts: 1 });
 CouponSchema.index({ applicableCategories: 1 });

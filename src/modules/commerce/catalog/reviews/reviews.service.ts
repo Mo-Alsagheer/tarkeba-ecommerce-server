@@ -3,6 +3,7 @@ import {
     NotFoundException,
     BadRequestException,
     ForbiddenException,
+    Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model, Types } from 'mongoose';
@@ -11,13 +12,15 @@ import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
 import { ModerateReviewDto } from './dto/moderate-review.dto';
 import { QueryReviewsDto } from './dto/query-reviews.dto';
-import { SortOrder } from '../../../../common/enums';
+import { SortOrder, ReviewSortBy } from '../../../../common/enums';
 import { ReviewStatsSummary } from '../../../../common/interfaces';
 import { OrdersService } from '../../../commerce/sales/orders/orders.service';
 import { ProductsService } from '../products/products.service';
 
 @Injectable()
 export class ReviewsService {
+    private readonly logger = new Logger(ReviewsService.name);
+
     constructor(
         @InjectModel(Review.name)
         private reviewModel: Model<ReviewDocument>,
@@ -38,11 +41,15 @@ export class ReviewsService {
         }
 
         // Verify that the user actually purchased this product in this order
-        const order = await this.ordersService.findOne(createReviewDto.orderId);
+        const { order } = await this.ordersService.findOne(createReviewDto.orderId);
+
+        this.logger.log(`Order found: ${JSON.stringify(order)}`);
+        this.logger.log(`Order userID: ${order?.userID}, Current userId: ${userId}`);
+
         if (!order) {
             throw new NotFoundException('Order not found');
         }
-        if (order.userID.toString() !== userId) {
+        if (!order.userID || order.userID._id.toString() !== userId) {
             throw new ForbiddenException('You can only review products you have purchased');
         }
 
@@ -58,7 +65,14 @@ export class ReviewsService {
             orderId: new Types.ObjectId(createReviewDto.orderId),
         });
 
-        return review.save();
+        await review.save();
+
+        // Update product stats if review is auto-approved
+        if (review.status === ReviewStatus.APPROVED) {
+            await this.updateProductRating(createReviewDto.productId);
+        }
+
+        return review;
     }
 
     async findAll(queryDto: QueryReviewsDto) {
@@ -69,7 +83,7 @@ export class ReviewsService {
             userId,
             status,
             rating,
-            sortBy = 'createdAt',
+            sortBy = ReviewSortBy.CREATED_AT,
             sortOrder = SortOrder.DESC,
         } = queryDto;
 
@@ -96,7 +110,7 @@ export class ReviewsService {
 
         const skip = (Number(page) - 1) * Number(limit);
 
-        const [reviews, total] = await Promise.all([
+        const [reviews, total, summary] = await Promise.all([
             this.reviewModel
                 .find(filter)
                 .populate('userId', 'username email')
@@ -106,10 +120,75 @@ export class ReviewsService {
                 .limit(limit)
                 .exec(),
             this.reviewModel.countDocuments(filter),
+            this.reviewModel.aggregate([
+                { $match: filter },
+                {
+                    $group: {
+                        _id: null,
+                        averageRating: { $avg: '$rating' },
+                        totalReviews: { $sum: 1 },
+                        ratingDistribution: { $push: '$rating' },
+                    },
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        averageRating: { $round: ['$averageRating', 2] },
+                        totalReviews: 1,
+                        ratingDistribution: {
+                            1: {
+                                $size: {
+                                    $filter: {
+                                        input: '$ratingDistribution',
+                                        cond: { $eq: ['$$this', 1] },
+                                    },
+                                },
+                            },
+                            2: {
+                                $size: {
+                                    $filter: {
+                                        input: '$ratingDistribution',
+                                        cond: { $eq: ['$$this', 2] },
+                                    },
+                                },
+                            },
+                            3: {
+                                $size: {
+                                    $filter: {
+                                        input: '$ratingDistribution',
+                                        cond: { $eq: ['$$this', 3] },
+                                    },
+                                },
+                            },
+                            4: {
+                                $size: {
+                                    $filter: {
+                                        input: '$ratingDistribution',
+                                        cond: { $eq: ['$$this', 4] },
+                                    },
+                                },
+                            },
+                            5: {
+                                $size: {
+                                    $filter: {
+                                        input: '$ratingDistribution',
+                                        cond: { $eq: ['$$this', 5] },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            ]),
         ]);
 
         return {
             reviews,
+            summary: summary[0] || {
+                averageRating: 0,
+                totalReviews: 0,
+                ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+            },
             pagination: {
                 page,
                 limit,
@@ -190,6 +269,11 @@ export class ReviewsService {
             .populate('productId', 'name images')
             .exec();
 
+        // Update product stats when review status changes
+        if (updatedReview) {
+            await this.updateProductRating(review.productId.toString());
+        }
+
         return updatedReview!;
     }
 
@@ -205,7 +289,23 @@ export class ReviewsService {
             throw new ForbiddenException('You can only delete your own reviews');
         }
 
+        const productId = review.productId.toString();
         await this.reviewModel.findByIdAndDelete(id);
+
+        // Update product stats after deletion
+        await this.updateProductRating(productId);
+    }
+
+    /**
+     * Update product's averageRating and reviewCount based on approved reviews
+     */
+    private async updateProductRating(productId: string): Promise<void> {
+        const stats = await this.getProductReviewStats(productId);
+        await this.productsService.updateRating(
+            productId,
+            stats.averageRating || 0,
+            stats.totalReviews || 0
+        );
     }
 
     async getProductReviewStats(productId: string): Promise<ReviewStatsSummary> {

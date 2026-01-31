@@ -67,6 +67,6 @@ import storageConfig from './config/storage.config';
 export class AppModule implements NestModule {
     configure(consumer: MiddlewareConsumer) {
         // Apply sanitize middleware to all routes
-        consumer.apply(SanitizeMiddleware).forRoutes('*');
+        consumer.apply(SanitizeMiddleware).forRoutes('*path');
     }
 }

@@ -59,10 +59,10 @@ export class ReturnsService {
         userID: string,
         requestedQuantity: number
     ): Promise<Order> {
-        const order = await this.orderService.findOne(orderID);
+        const { order } = await this.orderService.findOne(orderID);
 
         // Check if order exists and belongs to the user
-        if (!order || order.userID.toString() !== userID) {
+        if (!order || !order.userID || order.userID.toString() !== userID) {
             throw new NotFoundException(API_RESPONSE_MESSAGES.RETURNS.ORDER_NOT_FOUND);
         }
 

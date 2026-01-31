@@ -15,7 +15,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@ne
 import { CouponsService } from './coupons.service';
 import { CreateCouponDto } from './dto/create-coupon.dto';
 import { UpdateCouponDto } from './dto/update-coupon.dto';
-import { ApplyCouponDto, CouponApplicationResult } from './dto/apply-coupon.dto';
+import { ValidateCouponDto, CouponApplicationResult } from './dto/apply-coupon.dto';
 import { QueryCouponsDto } from './dto/query-coupons.dto';
 import { JwtAuthGuard } from '../../../identity/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../identity/auth/guards/roles.guard';
@@ -75,7 +75,7 @@ export class CouponsController {
         this.logger.log(
             `${COUPONS_CONTROLLER_LOG_MESSAGES.CREATING_COUPON}: ${createCouponDto.code}`
         );
-        return this.couponsService.create(createCouponDto, req.user.userId);
+        return this.couponsService.create(createCouponDto, req.user.userID);
     }
 
     @Get()
@@ -130,13 +130,13 @@ export class CouponsController {
         description: COUPONS_API_RESPONSES.UNAUTHORIZED,
     })
     async applyCoupon(
-        @Body() applyCouponDto: ApplyCouponDto,
+        @Body() applyCouponDto: ValidateCouponDto,
         @Request() req: IAuthenticatedRequest
     ): Promise<CouponApplicationResult> {
         this.logger.log(
             `${COUPONS_CONTROLLER_LOG_MESSAGES.APPLYING_COUPON}: ${applyCouponDto.code}`
         );
-        return this.couponsService.applyCoupon(applyCouponDto, req.user.userId);
+        return this.couponsService.applyCoupon(applyCouponDto, req.user.userID);
     }
 
     @Get('code/:code')

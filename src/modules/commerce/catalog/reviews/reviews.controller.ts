@@ -46,7 +46,7 @@ export class ReviewsController {
     })
     @ApiResponse({ status: 401, description: API_RESPONSE_MESSAGES.ERROR.UNAUTHORIZED })
     create(@Body() createReviewDto: CreateReviewDto, @Request() req: IAuthenticatedRequest) {
-        return this.reviewsService.create(createReviewDto, req.user.sub);
+        return this.reviewsService.create(createReviewDto, req.user.userID);
     }
 
     @Get()

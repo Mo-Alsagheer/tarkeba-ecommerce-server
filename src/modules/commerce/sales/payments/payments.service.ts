@@ -98,8 +98,9 @@ export class PaymentsService {
             const savedPayment = await payment.save();
 
             try {
-                const userEmail = 'customer@example.com';
-                const userName = order.shippingAddress?.customerName || 'Customer User';
+                const { order } = await this.ordersService.findOne(createPaymentDto.orderID);
+                const userEmail = order.email;
+                const userName = order.shippingAddress.customerName;
 
                 this.logger.log('Initiating wallet payment with Paymob', {
                     orderId: createPaymentDto.orderID,
@@ -332,7 +333,7 @@ export class PaymentsService {
                     const orderItems = await this.ordersService.getOrderItems(
                         payment.orderId.toString()
                     );
-                    
+
                     const stockItems = orderItems.map((item) => ({
                         productID: item.productID.toString(),
                         quantity: item.quantity,
@@ -422,5 +423,103 @@ export class PaymentsService {
             totalPayments: stats.reduce((sum, stat) => sum + stat.count, 0),
             totalAmount: stats.reduce((sum, stat) => sum + stat.totalAmount, 0),
         };
+    }
+
+    async handleCallback(callbackData: any): Promise<{
+        success: boolean;
+        orderId: string;
+        paymentStatus: PaymentStatus;
+        message: string;
+    }> {
+        this.logger.log(`Processing callback for transaction ${callbackData.id}`);
+
+        // Verify callback signature
+        const isValid = this.paymobService.verifyCallbackSignature(callbackData);
+
+        if (!isValid) {
+            this.logger.error('Invalid callback signature');
+            throw new BadRequestException('Invalid callback signature');
+        }
+
+        // Find payment by Paymob order ID
+        const payment = await this.paymentModel.findOne({
+            paymobOrderId: callbackData.order,
+        });
+
+        if (!payment) {
+            this.logger.error(`Payment not found for Paymob order ${callbackData.order}`);
+            throw new NotFoundException(`Payment not found for order ${callbackData.order}`);
+        }
+
+        const isSuccess = callbackData.success === 'true';
+        const isPending = callbackData.pending === 'true';
+
+        // Update payment status based on callback data
+        if (isSuccess && !isPending) {
+            payment.status = PaymentStatus.COMPLETED;
+            payment.paidAt = new Date();
+            payment.paymobTransactionId = callbackData.id;
+            payment.transactionReference = callbackData.id;
+
+            await payment.save();
+
+            // Update order status
+            await this.ordersService.update(payment.orderId.toString(), {
+                paymentStatus: OrderPaymentStatus.PAID,
+            });
+
+            // Reduce stock for wallet payments
+            if (payment.paymentMethod === PaymentMethod.WALLET) {
+                try {
+                    const orderItems = await this.ordersService.getOrderItems(
+                        payment.orderId.toString()
+                    );
+
+                    const stockItems = orderItems.map((item) => ({
+                        productID: item.productID.toString(),
+                        quantity: item.quantity,
+                        size: item.size,
+                    }));
+
+                    await this.productsService.reduceStockForOrder(stockItems);
+                    this.logger.log(
+                        `Stock reduced for order ${payment.orderId.toString()} after successful callback`
+                    );
+                } catch (error) {
+                    this.logger.error(
+                        `Failed to reduce stock in callback: ${error instanceof Error ? error.message : String(error)}`
+                    );
+                }
+            }
+
+            return {
+                success: true,
+                orderId: payment.orderId.toString(),
+                paymentStatus: PaymentStatus.COMPLETED,
+                message: 'Payment completed successfully',
+            };
+        } else if (isPending) {
+            payment.status = PaymentStatus.PROCESSING;
+            await payment.save();
+
+            return {
+                success: false,
+                orderId: payment.orderId.toString(),
+                paymentStatus: PaymentStatus.PROCESSING,
+                message: 'Payment is being processed',
+            };
+        } else {
+            payment.status = PaymentStatus.FAILED;
+            payment.failedAt = new Date();
+            payment.errorMessage = 'Payment failed at gateway';
+            await payment.save();
+
+            return {
+                success: false,
+                orderId: payment.orderId.toString(),
+                paymentStatus: PaymentStatus.FAILED,
+                message: 'Payment failed',
+            };
+        }
     }
 }
