@@ -56,8 +56,16 @@ services:
             - /app/node_modules
             - ./uploads:/app/uploads
             - ./logs:/app/logs
+        environment:
+            REDIS_HOST: redis
+            REDIS_PORT: 6379
+            REDIS_PASSWORD: ${REDIS_PASSWORD}
+            MONGO_URI: ${MONGO_URI}
+            NODE_ENV: ${NODE_ENV}
         networks:
-            - tarkeba-network
+            tarkeba-network:
+                aliases:
+                    - tarkeba-app
         depends_on:
             mongodb:
                 condition: service_healthy
@@ -96,7 +104,3 @@ volumes:
         driver: local
     redis_data:
         driver: local
-
-networks:
-    tarkeba-network:
-        driver: bridge

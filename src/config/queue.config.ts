@@ -9,13 +9,33 @@ export const QUEUE_NAMES = {
 } as const;
 
 // Redis configuration
-export const getRedisConfig = () => ({
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379', 10),
-    password: process.env.REDIS_PASSWORD,
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-});
+export const getRedisConfig = (): any => {
+    // If a full REDIS_URL is provided (typical for Railway/Heroku)
+    if (process.env.REDIS_URL) {
+        try {
+            const url = new URL(process.env.REDIS_URL);
+            return {
+                host: url.hostname,
+                port: parseInt(url.port || '6379', 10),
+                password: url.password || undefined,
+                username: url.username || undefined,
+                maxRetriesPerRequest: null,
+                enableReadyCheck: false,
+            };
+        } catch (e) {
+            // If URL parsing fails, fallback to individual vars or defaults
+            console.error('Failed to parse REDIS_URL, falling back to components');
+        }
+    }
+
+    return {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+        password: process.env.REDIS_PASSWORD,
+        maxRetriesPerRequest: null,
+        enableReadyCheck: false,
+    };
+};
 
 // Queue options with retry and rate limiting
 export const getQueueOptions = (queueName: string): QueueOptions => ({
