@@ -1,5 +1,5 @@
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -15,10 +15,28 @@ COPY . .
 # Build the application
 RUN npx nest build
 
-# Production stage
-FROM node:18-alpine AS production
+# Development stage
+FROM node:20-alpine AS development
 
 WORKDIR /app
+
+RUN apk add --no-cache curl
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["npm", "run", "start:dev"]
+
+# Production stage
+FROM node:20-alpine AS production
+
+WORKDIR /app
+
+RUN apk add --no-cache curl
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs
