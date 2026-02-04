@@ -105,11 +105,20 @@ export interface PaymobCallbackData {
     is_auth: string;
     is_capture: string;
     is_refunded: string;
-    is_void: string;
+    is_voided: string;
+    is_3d_secure: string;
+    is_standalone_payment: string;
     order: string;
     integration_id: string;
     currency: string;
     hmac: string;
+    created_at: string;
+    error_occured: string;
+    has_parent_transaction: string;
+    owner: string;
+    source_data_pan: string;
+    source_data_sub_type: string;
+    source_data_type: string;
 }
 
 @Injectable()
@@ -435,17 +444,28 @@ export class PaymobService {
     }
 
     verifyCallbackSignature(callbackData: PaymobCallbackData): boolean {
+        // Paymob HMAC calculation for callbacks
+        // The order is critical and must match Paymob's specification
         const concatenatedString = [
             callbackData.amount_cents,
+            callbackData.created_at,
             callbackData.currency,
+            callbackData.error_occured,
+            callbackData.has_parent_transaction,
             callbackData.id,
             callbackData.integration_id,
+            callbackData.is_3d_secure,
             callbackData.is_auth,
             callbackData.is_capture,
             callbackData.is_refunded,
-            callbackData.is_void,
+            callbackData.is_standalone_payment,
+            callbackData.is_voided,
             callbackData.order,
+            callbackData.owner,
             callbackData.pending,
+            callbackData.source_data_pan,
+            callbackData.source_data_sub_type,
+            callbackData.source_data_type,
             callbackData.success,
         ].join('');
 

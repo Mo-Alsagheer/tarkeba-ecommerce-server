@@ -5,6 +5,7 @@ export type OrderDocument = Order & Document;
 
 export enum OrderStatus {
     PENDING = 'pending',
+    CONFIRMED = 'confirmed',
     PROCESSING = 'processing',
     SHIPPED = 'shipped',
     DELIVERED = 'delivered',
@@ -105,6 +106,7 @@ export class Order {
 export const OrderSchema = SchemaFactory.createForClass(Order);
 
 // Create indexes
+OrderSchema.index({ orderNumber: 1 });
 OrderSchema.index({ userId: 1 });
 OrderSchema.index({ status: 1 });
 OrderSchema.index({ paymentStatus: 1 });

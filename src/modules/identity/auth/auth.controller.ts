@@ -92,7 +92,7 @@ export class AuthController {
         const refreshToken: string | undefined = hasRefreshToken(req.cookies)
             ? (req.cookies as { refreshToken: string }).refreshToken
             : undefined;
-            
+
         if (!refreshToken) {
             return res.status(401).json({ message: API_RESPONSE_MESSAGES.AUTH.NO_REFRESH_TOKEN });
         }
@@ -215,7 +215,11 @@ export class AuthController {
         });
 
         // Redirect to frontend with token
-        return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${accessToken}`);
+        let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        if (!frontendUrl.startsWith('http')) {
+            frontendUrl = `https://${frontendUrl}`;
+        }
+        return res.redirect(`${frontendUrl}/auth/callback?token=${accessToken}`);
     }
 
     // Resend OTP for email verification

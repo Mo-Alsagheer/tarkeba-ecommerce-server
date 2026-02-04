@@ -249,9 +249,7 @@ export class AdminService {
                                                         $filter: {
                                                             input: '$$value',
                                                             as: 'item',
-                                                            cond: {
-                                                                $ne: ['$$item.size', '$$this.size'],
-                                                            },
+                                                            cond: { $ne: ['$$item.size', '$$this.size'] },
                                                         },
                                                     },
                                                     [
@@ -259,23 +257,13 @@ export class AdminService {
                                                             size: '$$this.size',
                                                             quantity: {
                                                                 $add: [
-                                                                    {
-                                                                        $arrayElemAt: [
-                                                                            '$$existing.quantity',
-                                                                            0,
-                                                                        ],
-                                                                    },
+                                                                    { $arrayElemAt: ['$$existing.quantity', 0] },
                                                                     '$$this.quantity',
                                                                 ],
                                                             },
                                                             revenue: {
                                                                 $add: [
-                                                                    {
-                                                                        $arrayElemAt: [
-                                                                            '$$existing.revenue',
-                                                                            0,
-                                                                        ],
-                                                                    },
+                                                                    { $arrayElemAt: ['$$existing.revenue', 0] },
                                                                     '$$this.revenue',
                                                                 ],
                                                             },
@@ -328,7 +316,7 @@ export class AdminService {
 
     // Get order status breakdown
     async getOrderStatusBreakdown() {
-        const results = await this.orderModel.aggregate<{ status: string; count: number }>([
+        return await this.orderModel.aggregate<{ _id: string; count: number }>([
             {
                 $group: {
                     _id: '$status',
@@ -343,13 +331,6 @@ export class AdminService {
                 },
             },
         ]);
-
-        const statusMap = new Map<string, number>(results.map((r) => [r.status, r.count]));
-
-        return Object.values(OrderStatus).map((status) => ({
-            status,
-            count: statusMap.get(status) || 0,
-        }));
     }
 
     // Get user growth (last N days)
@@ -376,21 +357,10 @@ export class AdminService {
     }
 
     // Get all users with pagination
-    async getAllUsers(page: number = 1, limit: number = 10, search?: string) {
+    async getAllUsers(page: number = 1, limit: number = 10) {
         const skip = (page - 1) * limit;
-
-        const filter: any = {};
-        if (search) {
-            filter.$or = [
-                { username: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } },
-                { firstName: { $regex: search, $options: 'i' } },
-                { lastName: { $regex: search, $options: 'i' } },
-            ];
-        }
-
-        const users = await this.userModel.find(filter).select('-password').skip(skip).limit(limit);
-        const total = await this.userModel.countDocuments(filter);
+        const users = await this.userModel.find().select('-password').skip(skip).limit(limit);
+        const total = await this.userModel.countDocuments();
 
         return {
             users,

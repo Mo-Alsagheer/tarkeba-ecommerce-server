@@ -1,10 +1,8 @@
 // IMPORTANT: Load environment variables FIRST before any other imports
 import { config } from 'dotenv';
 config();
-console.log('[ENV] ACCESS_JWT_SECRET:', process.env.ACCESS_JWT_SECRET ? 'SET' : 'NOT SET');
-console.log('[ENV] REFRESH_JWT_SECRET:', process.env.REFRESH_JWT_SECRET ? 'SET' : 'NOT SET');
-console.log('[ENV] JWT_ISSUER:', process.env.JWT_ISSUER ? 'SET' : 'NOT SET');
-console.log('[ENV] JWT_AUDIENCE:', process.env.JWT_AUDIENCE ? 'SET' : 'NOT SET');
+// console.log('[ENV] ACCESS_JWT_SECRET:', process.env.ACCESS_JWT_SECRET ? 'SET' : 'NOT SET');
+// console.log('[ENV] REFRESH_JWT_SECRET:', process.env.REFRESH_JWT_SECRET ? 'SET' : 'NOT SET');
 
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -69,6 +67,6 @@ import storageConfig from './config/storage.config';
 export class AppModule implements NestModule {
     configure(consumer: MiddlewareConsumer) {
         // Apply sanitize middleware to all routes
-        consumer.apply(SanitizeMiddleware).forRoutes('*path');
+        consumer.apply(SanitizeMiddleware).forRoutes('*');
     }
 }

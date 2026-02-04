@@ -1,14 +1,4 @@
-import {
-    Controller,
-    Get,
-    Delete,
-    Patch,
-    Param,
-    Query,
-    Body,
-    UseGuards,
-    Logger,
-} from '@nestjs/common';
+import { Controller, Get, Delete, Patch, Param, Query, Body, UseGuards, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../identity/auth/guards/jwt-auth.guard';
@@ -44,12 +34,8 @@ export class AdminController {
     @Get('users')
     @ApiOperation({ summary: API_OPERATIONS.ADMIN.GET_ALL_USERS.SUMMARY })
     @ApiResponse({ status: 200, description: API_RESPONSE_MESSAGES.ADMIN.USERS_LIST_RETRIEVED })
-    async getAllUsers(
-        @Query('page') page?: number,
-        @Query('limit') limit?: number,
-        @Query('search') search?: string
-    ) {
-        return this.adminService.getAllUsers(page || 1, limit || 10, search);
+    async getAllUsers(@Query('page') page?: number, @Query('limit') limit?: number) {
+        return this.adminService.getAllUsers(page || 1, limit || 10);
     }
 
     @Get('orders')
@@ -73,10 +59,7 @@ export class AdminController {
     @ApiParam({ name: 'id', description: 'Order ID' })
     @ApiResponse({ status: 200, description: 'Order status updated successfully' })
     @ApiResponse({ status: 404, description: 'Order not found' })
-    async updateOrderStatus(
-        @Param('id') id: string,
-        @Body() updateOrderStatusDto: UpdateOrderStatusDto
-    ) {
+    async updateOrderStatus(@Param('id') id: string, @Body() updateOrderStatusDto: UpdateOrderStatusDto) {
         return this.adminService.updateOrderStatus(id, updateOrderStatusDto.status);
     }
 
