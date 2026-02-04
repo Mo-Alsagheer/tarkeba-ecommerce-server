@@ -16,6 +16,7 @@ import { IdentityModule } from './modules/identity/identity.module';
 import { CommerceModule } from './modules/commerce/commerce.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { SanitizeMiddleware } from './common/middleware/sanitize.middleware';
+import { HealthController } from './health/health.controller';
 
 // Import all configuration modules
 import appConfig from './config/app/configuration';
@@ -58,6 +59,7 @@ import storageConfig from './config/storage.config';
         CommerceModule, // Catalog + Sales + Returns
         AdminModule, // Admin dashboard
     ],
+    controllers: [HealthController],
     providers: [
         // Apply rate limiting globally
         {
