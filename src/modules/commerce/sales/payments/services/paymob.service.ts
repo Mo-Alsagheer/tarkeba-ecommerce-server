@@ -469,10 +469,22 @@ export class PaymobService {
             callbackData.success,
         ].join('');
 
+        this.logger.debug('HMAC Verification Details:', {
+            concatenatedString,
+            hmacSecret: this.config.hmacSecret?.substring(0, 10) + '...',
+            receivedHmac: callbackData.hmac,
+        });
+
         const calculatedHmac = crypto
             .createHmac('sha512', this.config.hmacSecret)
             .update(concatenatedString)
             .digest('hex');
+
+        this.logger.debug('HMAC Comparison:', {
+            calculated: calculatedHmac,
+            received: callbackData.hmac,
+            match: calculatedHmac === callbackData.hmac,
+        });
 
         return calculatedHmac === callbackData.hmac;
     }

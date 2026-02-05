@@ -10,7 +10,11 @@ import {
     Request,
     HttpCode,
     HttpStatus,
+    Logger,
+    Res,
+    Redirect,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
@@ -24,6 +28,7 @@ import { UserRole } from '../../../../common/enums';
 
 @Controller('payments')
 export class PaymentsController {
+    private readonly logger = new Logger(PaymentsController.name);
     constructor(private readonly paymentsService: PaymentsService) {}
 
     @Post()
@@ -91,8 +96,14 @@ export class PaymentsController {
     }
 
     @Get('callback/paymob')
-    @HttpCode(HttpStatus.OK)
-    async handlePaymobCallback(@Query() callbackData: any) {
+    async handlePaymobCallback(@Query() callbackData: any, @Res() res: Response) {
+        this.logger.log('Received Paymob callback', {
+            id: callbackData.id,
+            order: callbackData.order,
+            success: callbackData.success,
+            amount_cents: callbackData.amount_cents,
+        });
+
         // Map nested source_data fields from query params to flat structure
         const mappedData = {
             ...callbackData,
@@ -101,21 +112,21 @@ export class PaymentsController {
             source_data_type: callbackData['source_data.type'] || '',
         };
 
+        this.logger.debug('Mapped callback data keys:', Object.keys(mappedData));
+
         const result = await this.paymentsService.handleCallback(mappedData);
         
         // Redirect user to appropriate page based on payment status
         const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
         
         if (result.success) {
-            return {
-                ...result,
-                redirectUrl: `${baseUrl}/orders/${result.orderId}/success`,
-            };
+            const redirectUrl = `${baseUrl}/orders/${result.orderId}/success`;
+            this.logger.log(`Redirecting to success page: ${redirectUrl}`);
+            return res.redirect(redirectUrl);
         } else {
-            return {
-                ...result,
-                redirectUrl: `${baseUrl}/orders/${result.orderId}/failed`,
-            };
+            const redirectUrl = `${baseUrl}/orders/${result.orderId}/failed`;
+            this.logger.log(`Redirecting to failed page: ${redirectUrl}`);
+            return res.redirect(redirectUrl);
         }
     }
 }
