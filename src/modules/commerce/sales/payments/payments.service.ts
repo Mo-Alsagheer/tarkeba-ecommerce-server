@@ -334,11 +334,18 @@ export class PaymentsService {
                         payment.orderId.toString()
                     );
 
-                    const stockItems = orderItems.map((item) => ({
-                        productID: item.productID.toString(),
-                        quantity: item.quantity,
-                        size: item.size,
-                    }));
+                    const stockItems = orderItems.map((item) => {
+                        // Handle both populated and non-populated productID
+                        const productId = typeof item.productID === 'object' && item.productID._id
+                            ? item.productID._id.toString()
+                            : item.productID.toString();
+                        
+                        return {
+                            productID: productId,
+                            quantity: item.quantity,
+                            size: item.size,
+                        };
+                    });
 
                     await this.productsService.reduceStockForOrder(stockItems);
                     this.logger.log(
@@ -475,11 +482,18 @@ export class PaymentsService {
                         payment.orderId.toString()
                     );
 
-                    const stockItems = orderItems.map((item) => ({
-                        productID: item.productID.toString(),
-                        quantity: item.quantity,
-                        size: item.size,
-                    }));
+                    const stockItems = orderItems.map((item) => {
+                        // Handle both populated and non-populated productID
+                        const productId = typeof item.productID === 'object' && item.productID._id
+                            ? item.productID._id.toString()
+                            : item.productID.toString();
+                        
+                        return {
+                            productID: productId,
+                            quantity: item.quantity,
+                            size: item.size,
+                        };
+                    });
 
                     await this.productsService.reduceStockForOrder(stockItems);
                     this.logger.log(

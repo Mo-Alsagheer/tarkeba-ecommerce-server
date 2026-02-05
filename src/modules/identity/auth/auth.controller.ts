@@ -71,14 +71,18 @@ export class AuthController {
             IP,
             device
         );
+
+        // Set cookie for browsers that support it
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'strict',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: refreshTokenTtl,
-            path: '/auth/refresh',
+            path: '/api/auth/refresh',
         });
-        return res.json({ accessToken });
+
+        // Also return the refresh token in the response body for clients that need it
+        return res.json({ accessToken, refreshToken });
     }
 
     @Post('refresh')
@@ -88,10 +92,10 @@ export class AuthController {
         description: API_RESPONSE_MESSAGES.AUTH.TOKENS_ROTATED,
     })
     async refresh(@Body() dto: RefreshDto, @Req() req: Request, @Res() res: Response) {
-        // Accept refresh token from cookie only
+        // Accept refresh token from cookie or request body
         const refreshToken: string | undefined = hasRefreshToken(req.cookies)
             ? (req.cookies as { refreshToken: string }).refreshToken
-            : undefined;
+            : dto.refreshToken;
 
         if (!refreshToken) {
             return res.status(401).json({ message: API_RESPONSE_MESSAGES.AUTH.NO_REFRESH_TOKEN });
@@ -103,14 +107,18 @@ export class AuthController {
             refreshToken: newRefreshToken,
             refreshTokenTtl,
         } = await this.authService.refresh({ refreshToken }, IP, device);
+
+        // Set cookie for browsers that support it
         res.cookie('refreshToken', newRefreshToken, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'strict',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: refreshTokenTtl,
-            path: '/auth/refresh',
+            path: '/api/auth/refresh',
         });
-        return res.json({ accessToken });
+
+        // Also return the refresh token in the response body for clients that need it
+        return res.json({ accessToken, refreshToken: newRefreshToken });
     }
 
     @Post('logout')
