@@ -115,10 +115,10 @@ export class PaymentsController {
         this.logger.debug('Mapped callback data keys:', Object.keys(mappedData));
 
         const result = await this.paymentsService.handleCallback(mappedData);
-        
+
         // Redirect user to appropriate page based on payment status
         const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
-        
+
         if (result.success) {
             const redirectUrl = `${baseUrl}/orders/${result.orderId}/success`;
             this.logger.log(`Redirecting to success page: ${redirectUrl}`);
