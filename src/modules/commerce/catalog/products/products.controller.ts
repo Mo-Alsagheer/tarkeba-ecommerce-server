@@ -125,7 +125,7 @@ export class ProductsController {
         description: PRODUCTS_API_RESPONSES.PRODUCTS_RETRIEVED,
     })
     async findAll(@Query() queryDto: QueryProductDto) {
-        this.logger.log(PRODUCTS_LOG_MESSAGES.FETCHING_PRODUCTS(JSON.stringify(queryDto)));
+        // this.logger.log(PRODUCTS_LOG_MESSAGES.FETCHING_PRODUCTS(JSON.stringify(queryDto)));
         return await this.productsService.findAll(queryDto);
     }
 
@@ -137,7 +137,7 @@ export class ProductsController {
         description: PRODUCTS_API_RESPONSES.FEATURED_PRODUCTS_RETRIEVED,
     })
     async getFeatured(@Query('limit') limit?: number) {
-        this.logger.log(PRODUCTS_LOG_MESSAGES.FETCHING_FEATURED(limit));
+        // this.logger.log(PRODUCTS_LOG_MESSAGES.FETCHING_FEATURED(limit));
         return await this.productsService.getFeaturedProducts(limit);
     }
 
