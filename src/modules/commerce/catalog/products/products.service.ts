@@ -175,11 +175,9 @@ export class ProductsService {
                 },
             ]);
 
-            this.logger.debug(result);
             const data = result?.[0]?.data || [];
             const total = result?.[0]?.totalCount?.[0]?.count || 0;
             const totalPages = Math.ceil(total / limit);
-            this.logger.debug(data);
             return {
                 products: data,
                 total,

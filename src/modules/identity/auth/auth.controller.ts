@@ -78,7 +78,7 @@ export class AuthController {
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: refreshTokenTtl,
-            path: '/api/auth/refresh',
+            path: '/',
         });
 
         // Also return the refresh token in the response body for clients that need it
@@ -114,7 +114,7 @@ export class AuthController {
             secure: process.env.NODE_ENV === 'production',
             sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
             maxAge: refreshTokenTtl,
-            path: '/api/auth/refresh',
+            path: '/',
         });
 
         // Also return the refresh token in the response body for clients that need it
@@ -156,7 +156,7 @@ export class AuthController {
             return res.status(401).json({ message: API_RESPONSE_MESSAGES.AUTH.INVALID_USER_ID });
         }
         await this.authService.logout(userID, refreshToken);
-        res.clearCookie('refreshToken', { path: '/auth/refresh' });
+        res.clearCookie('refreshToken', { path: '/' });
         return res.json({ message: API_RESPONSE_MESSAGES.AUTH.LOGGED_OUT });
     }
 
