@@ -1,52 +1,26 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
-import { Transporter } from 'nodemailer';
-import SMTPTransport from 'nodemailer/lib/smtp-transport';
+import { Resend } from 'resend';
 import * as handlebars from 'handlebars';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getMailConfig } from '../../../config/mail.config';
 import { EMAIL_SUBJECTS, MESSAGES } from '../../../common/constants';
 
 @Injectable()
 export class MailService {
     private readonly logger = new Logger(MailService.name);
-    private transporter: Transporter<SMTPTransport.SentMessageInfo>;
+    private resend: Resend;
     private templates: Map<string, HandlebarsTemplateDelegate> = new Map();
-    private isSmtpReady = false;
+    private readonly fromAddress: string;
 
     constructor() {
-        this.initializeTransporter();
+        const apiKey = process.env.RESEND_API_KEY;
+        if (!apiKey) {
+            this.logger.error('RESEND_API_KEY is not set — mail service will not work.');
+        }
+        this.resend = new Resend(apiKey);
+        this.fromAddress = `"${process.env.MAIL_FROM_NAME || 'Tarkeba E-Commerce'}" <${process.env.MAIL_FROM || 'onboarding@resend.dev'}>`;
         this.loadTemplates();
-    }
-
-    private initializeTransporter() {
-        const mailConfig = getMailConfig();
-        const transportOptions: SMTPTransport.Options = {
-            host: mailConfig.host,
-            port: mailConfig.port,
-            secure: mailConfig.secure,
-            auth: mailConfig.auth,
-            connectionTimeout: 10000, // 10s — fail fast instead of hanging
-            greetingTimeout: 10000,
-            socketTimeout: 15000,
-        };
-        this.transporter = nodemailer.createTransport(transportOptions);
-
-        // Verify connection (non-blocking — app starts regardless)
-        this.transporter.verify((error) => {
-            if (error) {
-                this.isSmtpReady = false;
-                this.logger.error(
-                    `${MESSAGES.LOGGER.FAILED_TO_CONNECT_TO_SMTP_SERVER} — ` +
-                        `Check MAIL_HOST/MAIL_PORT env vars and ensure outbound port ${mailConfig.port} is open on your server.`,
-                    error.message
-                );
-            } else {
-                this.isSmtpReady = true;
-                this.logger.log(MESSAGES.LOGGER.SMTP_SERVER_CONNECTION_ESTABLISHED);
-            }
-        });
+        this.logger.log('Mail service initialized using Resend (HTTPS API).');
     }
 
     private loadTemplates() {
@@ -61,19 +35,18 @@ export class MailService {
                     const compiledTemplate = handlebars.compile(templateContent);
                     this.templates.set(templateName, compiledTemplate);
                 } else {
-                    console.warn(`[MailService] Template file not found: ${templatePath}`);
+                    this.logger.warn(`Template file not found: ${templatePath}`);
                 }
             } catch (error) {
-                console.error(`[MailService] Failed to load template: ${templateName}`, error);
+                this.logger.error(`Failed to load template: ${templateName}`, error);
             }
         });
 
-        // console.log(`[MailService] Total templates loaded: ${this.templates.size}`);
+        this.logger.log(`Loaded ${this.templates.size} email templates.`);
     }
 
     private renderTemplate(templateName: string, context: any): string {
         const template = this.templates.get(templateName);
-        console.log(template);
         if (!template) {
             throw new Error(`Template not found: ${templateName}`);
         }
@@ -86,24 +59,22 @@ export class MailService {
         template: string;
         context: any;
     }): Promise<void> {
-        if (!this.isSmtpReady) {
-            throw new Error('Mail service is unavailable: SMTP server is not connected.');
-        }
-
-        const mailConfig = getMailConfig();
         const html = this.renderTemplate(options.template, options.context);
 
-        const mailOptions = {
-            from: `"${mailConfig.from.name}" <${mailConfig.from.address}>`,
-            to: options.to,
-            subject: options.subject,
-            html,
-        };
-
         try {
-            const info: SMTPTransport.SentMessageInfo =
-                await this.transporter.sendMail(mailOptions);
-            this.logger.log(MESSAGES.LOGGER.EMAIL_SENT_SUCCESSFULLY, options.to, info.messageId);
+            const { data, error } = await this.resend.emails.send({
+                from: this.fromAddress,
+                to: options.to,
+                subject: options.subject,
+                html,
+            });
+
+            if (error) {
+                this.logger.error(MESSAGES.LOGGER.FAILED_TO_SEND_EMAIL, options.to, error);
+                throw new Error(error.message);
+            }
+
+            this.logger.log(MESSAGES.LOGGER.EMAIL_SENT_SUCCESSFULLY, options.to, data?.id);
         } catch (error: unknown) {
             this.logger.error(MESSAGES.LOGGER.FAILED_TO_SEND_EMAIL, options.to, error);
             throw error;
