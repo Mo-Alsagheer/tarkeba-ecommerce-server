@@ -41,33 +41,43 @@ export class AuthService {
 
     // Register a new user
     async register(registerDto: RegisterDto) {
+        this.logger.log(`[register] Attempt for email: ${registerDto.email}`);
+
         // Check if user already exists
         const existing = await this.userModel.findOne({
             email: registerDto.email,
         });
         if (existing) {
+            this.logger.warn(`[register] Email already exists: ${registerDto.email}`);
             throw new BadRequestException(MESSAGES.USER.EMAIL_EXISTS);
         }
 
+        this.logger.log(`[register] Email is new, hashing password...`);
         const hashedPassword = await bcrypt.hash(registerDto.password, 12);
+
+        this.logger.log(`[register] Creating user document...`);
         const user = new this.userModel({
             username: registerDto.username,
             email: registerDto.email,
             password: hashedPassword,
         });
 
+        this.logger.log(`[register] Saving user to DB...`);
         await user.save();
-        this.logger.log(`${MESSAGES.LOGGER.NEW_USER_REGISTERED}: ${user.email}`);
+        this.logger.log(`[register] User saved successfully: ${user.email} (id: ${user._id})`);
 
         // Generate OTP and send email
         try {
+            this.logger.log(`[register] Generating OTP for user: ${user._id}`);
             const otp = await this.otpHelper.createOtp(user._id, OtpType.EMAIL_VERIFICATION);
+            this.logger.log(`[register] OTP created, enqueuing verification email...`);
             await this.emailProducerService.addVerificationEmailJob({
                 to: user.email,
                 username: user.username,
                 otpCode: otp.code,
                 expiresInMinutes: 10,
             });
+            this.logger.log(`[register] Verification email job enqueued successfully.`);
         } catch (error) {
             this.logger.error(MESSAGES.LOGGER.FAILED_TO_ENQUEUE_VERIFICATION_EMAIL, error);
         }
