@@ -97,6 +97,8 @@ export class PaymentsController {
 
     @Get('callback/paymob')
     async handlePaymobCallback(@Query() callbackData: any, @Res() res: Response) {
+        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+
         this.logger.log('Received Paymob callback', {
             id: callbackData.id,
             order: callbackData.order,
@@ -104,29 +106,31 @@ export class PaymentsController {
             amount_cents: callbackData.amount_cents,
         });
 
-        // Map nested source_data fields from query params to flat structure
-        const mappedData = {
-            ...callbackData,
-            source_data_pan: callbackData['source_data.pan'] || '',
-            source_data_sub_type: callbackData['source_data.sub_type'] || '',
-            source_data_type: callbackData['source_data.type'] || '',
-        };
+        try {
+            // Map nested source_data fields from query params to flat structure
+            const mappedData = {
+                ...callbackData,
+                source_data_pan: callbackData['source_data.pan'] || '',
+                source_data_sub_type: callbackData['source_data.sub_type'] || '',
+                source_data_type: callbackData['source_data.type'] || '',
+            };
 
-        this.logger.debug('Mapped callback data keys:', Object.keys(mappedData));
+            this.logger.debug('Mapped callback data keys:', Object.keys(mappedData));
 
-        const result = await this.paymentsService.handleCallback(mappedData);
+            const result = await this.paymentsService.handleCallback(mappedData);
 
-        // Redirect user to appropriate page based on payment status
-        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
-
-        if (result.success) {
-            const redirectUrl = `${baseUrl}/orders/${result.orderId}/success`;
-            this.logger.log(`Redirecting to success page: ${redirectUrl}`);
-            return res.redirect(redirectUrl);
-        } else {
-            const redirectUrl = `${baseUrl}/orders/${result.orderId}/failed`;
-            this.logger.log(`Redirecting to failed page: ${redirectUrl}`);
-            return res.redirect(redirectUrl);
+            if (result.success) {
+                const redirectUrl = `${baseUrl}/orders/${result.orderId}/success`;
+                this.logger.log(`Redirecting to success page: ${redirectUrl}`);
+                return res.redirect(redirectUrl);
+            } else {
+                const redirectUrl = `${baseUrl}/orders/${result.orderId}/failed`;
+                this.logger.log(`Redirecting to failed page: ${redirectUrl}`);
+                return res.redirect(redirectUrl);
+            }
+        } catch (error) {
+            this.logger.error('Error processing Paymob callback', error);
+            return res.redirect(`${baseUrl}/payment-failed`);
         }
     }
 }
