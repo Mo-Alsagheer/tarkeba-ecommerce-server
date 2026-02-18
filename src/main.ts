@@ -62,13 +62,21 @@ async function bootstrap() {
     // Global validation pipe with enhanced security
     app.useGlobalPipes(
         new ValidationPipe({
-            whitelist: true, // Strip properties that don't have decorators
-            forbidNonWhitelisted: false, // Allow nested transformations to work properly
-            transform: true, // Auto-transform payloads to DTO instances
+            whitelist: true,
+            forbidNonWhitelisted: false,
+            transform: true,
             transformOptions: {
-                enableImplicitConversion: true, // Enable for proper nested object transformation
+                enableImplicitConversion: true,
             },
-            disableErrorMessages: nodeEnv === 'production', // Hide detailed errors in production
+            // Return field-level errors in all environments (safe — no stack traces)
+            exceptionFactory: (errors) => {
+                const messages = errors.map((err) => ({
+                    field: err.property,
+                    errors: Object.values(err.constraints || {}),
+                }));
+                const { BadRequestException } = require('@nestjs/common');
+                return new BadRequestException(messages);
+            },
         })
     );
 

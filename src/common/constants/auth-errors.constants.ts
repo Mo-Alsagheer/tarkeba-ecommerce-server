@@ -16,8 +16,7 @@ export const AUTH_VALIDATION_MESSAGES = {
     EMAIL_INVALID: 'Please provide a valid email address',
     PASSWORD_REQUIRED: 'Password is required',
     PASSWORD_MIN_LENGTH: 'Password must be at least 8 characters long',
-    PASSWORD_COMPLEXITY:
-        'Password must contain uppercase, lowercase, number, and special character',
+    PASSWORD_COMPLEXITY: 'Password must contain at least one letter and one number',
     USERNAME_REQUIRED: 'Username is required',
     USERNAME_MIN_LENGTH: 'Username must be at least 2 characters long',
     USERNAME_MAX_LENGTH: 'Username must be at most 50 characters long',
@@ -38,7 +37,7 @@ export const AUTH_FIELD_CONSTRAINTS = {
     PASSWORD: {
         MIN_LENGTH: 8,
         MAX_LENGTH: 128,
-        PATTERN: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+        PATTERN: /^(?=.*[a-zA-Z])(?=.*\d).+/,
     },
     EMAIL: {
         FORMAT: 'email',
