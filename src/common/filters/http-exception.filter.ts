@@ -63,11 +63,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
             errorResponse.stack = exception.stack;
         }
 
-        // Log the error
-        this.logger.error(
-            `${request.method} ${request.url} - Status: ${status}`,
-            exception instanceof Error ? exception.stack : JSON.stringify(exception)
-        );
+        // Log the error — include validation field errors if present
+        const logDetail = Array.isArray(message)
+            ? `Validation errors: ${JSON.stringify(message)}`
+            : exception instanceof Error
+              ? exception.stack
+              : JSON.stringify(exception);
+        this.logger.error(`${request.method} ${request.url} - Status: ${status}`, logDetail);
 
         // Send response
         response.status(status).json(errorResponse);
