@@ -14,14 +14,19 @@ type SanitizableArray = SanitizableValue[];
 
 @Injectable()
 export class SanitizeMiddleware implements NestMiddleware {
+    // Routes where dot-notation query params are legitimate (e.g. Paymob callback)
+    private readonly QUERY_DOT_KEY_WHITELIST = ['/api/payments/callback/paymob'];
+
     use(req: Request, res: Response, next: NextFunction) {
+        const allowDotKeys = this.QUERY_DOT_KEY_WHITELIST.some((path) => req.path.startsWith(path));
+
         // Sanitize user input to prevent XSS and NoSQL injection
         if (req.body && typeof req.body === 'object') {
             req.body = this.sanitize(req.body as SanitizableValue);
         }
         // For query and params, sanitize in place since they're read-only
         if (req.query && typeof req.query === 'object') {
-            this.sanitizeInPlace(req.query);
+            this.sanitizeInPlace(req.query, allowDotKeys);
         }
         if (req.params && typeof req.params === 'object') {
             this.sanitizeInPlace(req.params);
@@ -29,11 +34,11 @@ export class SanitizeMiddleware implements NestMiddleware {
         next();
     }
 
-    private sanitizeInPlace(obj: Record<string, unknown>): void {
+    private sanitizeInPlace(obj: Record<string, unknown>, allowDotKeys = false): void {
         for (const key in obj) {
             if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                // Block NoSQL injection keys
-                if (key.startsWith('$') || key.includes('.')) {
+                // Block NoSQL injection keys (always block $-prefixed; block dots unless whitelisted)
+                if (key.startsWith('$') || (!allowDotKeys && key.includes('.'))) {
                     console.warn(`[Security] NoSQL injection attempt detected: key "${key}"`);
                     delete obj[key];
                     continue;

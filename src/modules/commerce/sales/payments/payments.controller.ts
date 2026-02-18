@@ -14,7 +14,7 @@ import {
     Res,
     Redirect,
 } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
@@ -93,6 +93,19 @@ export class PaymentsController {
     @HttpCode(HttpStatus.OK)
     handlePaymobWebhook(@Body() webhookData: PaymobWebhookDto) {
         return this.paymentsService.handleWebhook(webhookData);
+    }
+
+    @Post('callback/paymob')
+    @HttpCode(HttpStatus.OK)
+    handlePaymobCallbackPost(@Query() callbackData: any) {
+        // Paymob sends a server-to-server POST notification to the callback URL.
+        // We just acknowledge it here — the actual processing & redirect happens on the GET.
+        this.logger.log('Received Paymob callback POST (server notification)', {
+            id: callbackData.id,
+            order: callbackData.order,
+            success: callbackData.success,
+        });
+        return { received: true };
     }
 
     @Get('callback/paymob')

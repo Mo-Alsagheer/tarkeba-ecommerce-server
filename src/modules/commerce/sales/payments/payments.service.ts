@@ -335,11 +335,11 @@ export class PaymentsService {
                     );
 
                     const stockItems = orderItems.map((item) => {
-                        // Handle both populated and non-populated productID
-                        const productId = typeof item.productID === 'object' && item.productID._id
-                            ? item.productID._id.toString()
-                            : item.productID.toString();
-                        
+                        // productID may be a populated document, an ObjectId, or a plain string
+                        const raw = item.productID as any;
+                        const productId: string =
+                            raw?._id?.toString?.() || raw?.toString?.() || String(raw);
+
                         return {
                             productID: productId,
                             quantity: item.quantity,
@@ -483,11 +483,11 @@ export class PaymentsService {
                     );
 
                     const stockItems = orderItems.map((item) => {
-                        // Handle both populated and non-populated productID
-                        const productId = typeof item.productID === 'object' && item.productID._id
-                            ? item.productID._id.toString()
-                            : item.productID.toString();
-                        
+                        // productID may be a populated document, an ObjectId, or a plain string
+                        const raw = item.productID as any;
+                        const productId: string =
+                            raw?._id?.toString?.() || raw?.toString?.() || String(raw);
+
                         return {
                             productID: productId,
                             quantity: item.quantity,
