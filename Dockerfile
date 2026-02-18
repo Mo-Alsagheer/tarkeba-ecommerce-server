@@ -51,6 +51,9 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy built application from builder stage
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
 
+# Explicitly copy mail templates (in case nest-cli asset copy missed them)
+COPY --from=builder --chown=nestjs:nodejs /app/src/modules/messaging/mail/templates ./dist/modules/messaging/mail/templates
+
 
 # Create uploads directory
 RUN mkdir -p /app/uploads && chown nestjs:nodejs /app/uploads
