@@ -13,6 +13,7 @@ export class MailService {
     private readonly logger = new Logger(MailService.name);
     private transporter: Transporter<SMTPTransport.SentMessageInfo>;
     private templates: Map<string, HandlebarsTemplateDelegate> = new Map();
+    private isSmtpReady = false;
 
     constructor() {
         this.initializeTransporter();
@@ -26,14 +27,23 @@ export class MailService {
             port: mailConfig.port,
             secure: mailConfig.secure,
             auth: mailConfig.auth,
+            connectionTimeout: 10000, // 10s — fail fast instead of hanging
+            greetingTimeout: 10000,
+            socketTimeout: 15000,
         };
         this.transporter = nodemailer.createTransport(transportOptions);
 
-        // Verify connection
+        // Verify connection (non-blocking — app starts regardless)
         this.transporter.verify((error) => {
             if (error) {
-                this.logger.error(MESSAGES.LOGGER.FAILED_TO_CONNECT_TO_SMTP_SERVER, error);
+                this.isSmtpReady = false;
+                this.logger.error(
+                    `${MESSAGES.LOGGER.FAILED_TO_CONNECT_TO_SMTP_SERVER} — ` +
+                        `Check MAIL_HOST/MAIL_PORT env vars and ensure outbound port ${mailConfig.port} is open on your server.`,
+                    error.message
+                );
             } else {
+                this.isSmtpReady = true;
                 this.logger.log(MESSAGES.LOGGER.SMTP_SERVER_CONNECTION_ESTABLISHED);
             }
         });
@@ -76,6 +86,10 @@ export class MailService {
         template: string;
         context: any;
     }): Promise<void> {
+        if (!this.isSmtpReady) {
+            throw new Error('Mail service is unavailable: SMTP server is not connected.');
+        }
+
         const mailConfig = getMailConfig();
         const html = this.renderTemplate(options.template, options.context);
 
