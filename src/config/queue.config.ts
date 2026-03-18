@@ -10,10 +10,11 @@ export const QUEUE_NAMES = {
 
 // Redis configuration
 export const getRedisConfig = (): any => {
-    // If a full REDIS_URL is provided (typical for Railway/Heroku)
-    if (process.env.REDIS_URL) {
+    // Check for standard REDIS_URL or UPSTASH_REDIS_URL from Vercel integration
+    const redisUrl = process.env.REDIS_URL || process.env.UPSTASH_REDIS_URL || process.env.KV_URL;
+    if (redisUrl) {
         try {
-            const url = new URL(process.env.REDIS_URL);
+            const url = new URL(redisUrl);
             return {
                 host: url.hostname,
                 port: parseInt(url.port || '6379', 10),
@@ -21,10 +22,11 @@ export const getRedisConfig = (): any => {
                 username: url.username || undefined,
                 maxRetriesPerRequest: null,
                 enableReadyCheck: false,
+                tls: url.protocol === 'rediss:' ? { rejectUnauthorized: false } : undefined, // Important for Upstash/Vercel connections
             };
         } catch (e) {
             // If URL parsing fails, fallback to individual vars or defaults
-            console.error('Failed to parse REDIS_URL, falling back to components');
+            console.error('Failed to parse redis URL, falling back to components');
         }
     }
 
