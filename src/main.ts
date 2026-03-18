@@ -20,6 +20,12 @@ async function bootstrap() {
     const frontendUrl = configService.get<string>('app.frontendUrl', 'http://localhost:3000');
     const nodeEnv = configService.get<string>('app.nodeEnv', 'development');
 
+    const allowedOrigins = frontendUrl.split(',').map(url => url.trim());
+    const vercelClient = 'https://tarkeba-ecommerce-client.vercel.app';
+    if (!allowedOrigins.includes(vercelClient)) {
+        allowedOrigins.push(vercelClient);
+    }
+
     // Increase body size limit for file uploads
     app.use(express.json({ limit: '50mb' }));
     app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -43,7 +49,7 @@ async function bootstrap() {
     // CORS configuration with specific methods and headers
     app.use(
         cors({
-            origin: frontendUrl,
+            origin: allowedOrigins,
             credentials: true,
             methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
             allowedHeaders: ['Content-Type', 'Authorization'],
